@@ -1,0 +1,26 @@
+# Ghostty: Silverfox colors, Hack Nerd Font
+font-family = Hack Nerd Font Mono
+font-size = 11
+cursor-style = bar
+cursor-style-blink = false
+window-padding-x = 2
+window-padding-y = 2
+background = #1e2229
+foreground = #bbbbbb
+palette = 0=#1e2229
+palette = 1=#ed1515
+palette = 2=#44853a
+palette = 3=#f67400
+palette = 4=#1d99f3
+palette = 5=#9b59b6
+palette = 6=#1abc9c
+palette = 7=#fcfcfc
+palette = 8=#7f8c8d
+palette = 9=#c0392b
+palette = 10=#55a649
+palette = 11=#fdbc4b
+palette = 12=#3daee9
+palette = 13=#8e44ad
+palette = 14=#16a085
+palette = 15=#ffffff
+shell-integration = zsh

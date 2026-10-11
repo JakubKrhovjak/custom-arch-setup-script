@@ -1,168 +1,58 @@
-# Dev Tools Installation Script for Manjaro
+# Minimal Arch Linux setup
 
-Automated installation script for setting up a development environment on Manjaro Linux.
+Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in the **Simpleton** look
+(monochrome icons, dark BreathSlate colors), Ghostty + zsh + Starship, and a backend dev toolchain.
 
-## Overview
-
-This script automatically installs and configures a complete set of development tools for working with various technologies including Java, Node.js, Go, Docker, Kubernetes, and cloud tools.
-
-## Installed Tools
-
-### Core Tools
-- **Git** - version control system
-- **Base Development Tools** - `base-devel`, curl, wget, zip, unzip
-
-### Containerization
-- **Docker** - platform for containerizing applications
-- **Docker Compose** - tool for defining multi-container Docker applications
-
-### Programming Languages & Runtimes
-- **Go** - programming language
-- **Java 21** - installed via SDKMAN (Temurin distribution)
-- **Node.js 21** - installed via NVM
-
-### Build Tools & Package Managers
-- **Maven** - build tool for Java projects (via SDKMAN)
-- **npm** - package manager for Node.js (part of Node.js)
-- **SDKMAN** - SDK manager for Java ecosystem
-- **NVM** - Node Version Manager
-
-### Infrastructure as Code
-- **Terraform** - tool for managing infrastructure as code
-
-### Kubernetes
-- **kubectl** - CLI for working with Kubernetes clusters
-- **Kind** - Kubernetes in Docker (local Kubernetes clusters)
-
-### Cloud Tools
-- **Google Cloud SDK (gcloud)** - CLI for Google Cloud Platform
-- **GKE gcloud auth plugin** - plugin for kubectl authentication with GKE clusters
-
-## Requirements
-
-- Manjaro Linux or Arch-based distribution
-- Sudo privileges
-- Internet connection
+| Script | Run | What it does |
+|---|---|---|
+| `arch-install.sh` | Arch ISO, as root | LUKS2 (Argon2id) + btrfs (`@ @home @cache @log`), systemd-boot + UKI (`linux`, `linux-lts`), minimal Plasma, zram + earlyoom, Timeshift, yay; Secure Boot + TPM2 when the firmware is in setup mode |
+| `first-login.sh` | automatically at first login | opens Ghostty and runs the two scripts below with progress on screen (log `~/arch-setup/first-login.log`); on failure runs again at next login |
+| `post-install.sh` | (first login) | Simpleton theme (desktop + login screen), Ghostty as default terminal, dotfiles, `us,cz` keyboard |
+| `setup-script.sh` | (first login) | dev tools (below) |
+| `secureboot-tpm2.sh` | `sudo`, 3 phases | Secure Boot + TPM2 later (installed without setup mode) or again after a BIOS update |
 
 ## Installation
 
-1. Download the script:
-```bash
-git clone <repository-url>
-cd setup-script
+1. BIOS: Secure Boot **disabled** (the Arch ISO does not boot with it) and, for Secure Boot + TPM2,
+   keys deleted (**setup mode**). Boot the Arch ISO (UEFI), connect to the internet (`iwctl` for Wi-Fi).
+2. Get the scripts and install:
+   ```bash
+   pacman -Sy git && git clone https://github.com/JakubKrhovjak/manjaro-setup-script && cd manjaro-setup-script && bash arch-install.sh
+   ```
+   Asks for the disk, hostname, user, password and disk passphrase. Root stays locked (use `sudo`).
+3. `umount -R /mnt && cryptsetup close root && reboot`. With Secure Boot: BIOS → Secure Boot → **Enabled**
+   (mode Custom, do not restore default keys). The first boot asks for the disk passphrase once and
+   enrolls TPM2 (`tpm2-enroll.service`); from then on the disk unlocks without it.
+4. Log in to Plasma: Ghostty opens and runs the setup (asks for the sudo password once). Then log out and in.
+
+Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first boot, BIOS updates).
+
+## What gets installed
+
+**Desktop (minimal):** Plasma without `kde-applications-meta` — Dolphin, Kate, Okular, Gwenview, Spectacle,
+Ark, Filelight, KCalc, Ghostty (no Konsole), Firefox, VLC, Flatpak (Flathub), printing (CUPS).
+Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD GPU (Mesa, Vulkan).
+
+**Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Docker + Compose + Buildx, Go, Terraform,
+kubectl, Helm, k9s, kind, trivy, k3s, SDKMAN (Java 21 + 25 Temurin, Maven, Gradle), NVM (Node.js LTS),
+Python, Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
+JetBrains Toolbox, VS Code, Claude Code.
+
+## Layout
+
+```
+dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config
+theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,
+            wallpapers/Simpleton, color-schemes/BreathSlate.colors
 ```
 
-2. Set execution permissions:
-```bash
-chmod +x setup-script.sh
-```
-
-3. Run the script:
-```bash
-./setup-script.sh
-```
-
-## Post-Installation
-
-### Restart Shell
-To load all environment changes, run:
-```bash
-source ~/.bashrc
-```
-
-If you use zsh:
-```bash
-source ~/.zshrc
-```
-
-Or restart your terminal.
-
-### Docker Permissions
-To activate Docker permissions, log out and log back in to your system.
-
-### Verify Installation
-Check versions of installed tools:
-```bash
-git --version
-docker --version
-go version
-terraform --version
-java -version
-mvn --version
-node --version
-npm --version
-kubectl version --client
-kind --version
-gcloud --version
-```
-
-## Configuring SDKMAN and NVM
-
-### SDKMAN
-SDKMAN is installed in `~/.sdkman/`. To manage Java versions:
-```bash
-sdk list java          # List available Java versions
-sdk install java <version>
-sdk use java <version>
-sdk default java <version>
-```
-
-### NVM
-NVM is installed in `~/.nvm/`. To manage Node.js versions:
-```bash
-nvm list               # List installed versions
-nvm install <version>  # Install another version
-nvm use <version>      # Use specific version
-nvm alias default <version>
-```
-
-## Google Cloud SDK
-
-After installation, you need to initialize:
-```bash
-gcloud init
-```
-
-To login to GCP:
-```bash
-gcloud auth login
-```
-
-To configure kubectl with GKE:
-```bash
-gcloud container clusters get-credentials <cluster-name> --region=<region>
-```
+Secrets (API tokens) go to `~/.config/zsh/secrets.zsh` (`chmod 600`), never to this repo.
 
 ## Notes
 
-- The script checks if tools are already installed and skips their installation
-- All tools are installed with the latest stable versions
-- The script uses `set -e`, which means it stops at the first error
-- Docker requires sudo privileges for service management
-- The user is automatically added to the Docker group
-
-## Uninstallation
-
-To uninstall individual tools:
-
-```bash
-# SDKMAN
-rm -rf ~/.sdkman
-
-# NVM
-rm -rf ~/.nvm
-
-# Google Cloud SDK
-rm -rf ~/google-cloud-sdk
-
-# Other tools via pacman
-sudo pacman -R git docker docker-compose go terraform kubectl
-```
-
-## Support
-
-If you encounter problems:
-1. Check that you have an up-to-date Manjaro Linux
-2. Verify internet connection
-3. Check sudo privileges
-4. Look at the script output for error details
+- The theme is installed to `/usr/share` so the SDDM login screen (user `sddm`) can read it.
+  After changing the theme, run `post-install.sh` again.
+- Timeshift snapshots only `@`; UKIs live on the ESP. After restoring a snapshot with another kernel,
+  rebuild them: `sudo mkinitcpio -P`.
+- `theme/plasma/desktoptheme/simpleton` contains unmodified SVGs from Manjaro's Breath theme (CC BY-ND);
+  the wallpaper is Ant-Dark by EliverLara (GPL-3.0).

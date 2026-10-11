@@ -1,0 +1,26 @@
+[Icon Theme]
+Name=Simpleton
+Comment=Breeze s jednobarevnými spouštěči na panelu
+Inherits=breeze-dark,breeze,hicolor
+Directories=scalable/apps,scalable/preferences,scalable/places
+
+[scalable/apps]
+Size=48
+MinSize=8
+MaxSize=512
+Context=Applications
+Type=Scalable
+
+[scalable/preferences]
+Size=48
+MinSize=8
+MaxSize=512
+Context=Preferences
+Type=Scalable
+
+[scalable/places]
+Size=48
+MinSize=8
+MaxSize=512
+Context=Places
+Type=Scalable

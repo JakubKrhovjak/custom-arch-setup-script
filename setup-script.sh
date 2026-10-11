@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Dev tools for Arch Linux. Run as your user (not root) after post-install.sh: bash setup-script.sh
+# Safe to run again — installed tools are skipped.
+
 set -e
 
 echo "=================================="
@@ -24,27 +27,31 @@ print_info() {
     echo -e "${YELLOW}[i]${NC} $1"
 }
 
+[ "$(id -u)" -ne 0 ] || { print_error "Run as your user, not root"; exit 1; }
+
 # Update system
 print_info "Updating system packages..."
 sudo pacman -Syu --noconfirm
 
 # Install base dependencies
 print_info "Installing base dependencies..."
-sudo pacman -S --needed --noconfirm base-devel curl wget zip unzip
-
-# Install Git
-print_info "Installing Git..."
-sudo pacman -S --needed --noconfirm git
+sudo pacman -S --needed --noconfirm base-devel git curl wget zip unzip jq github-cli
 print_status "Git installed: $(git --version)"
+
+# Install yay (AUR helper) if not present
+if ! command -v yay &> /dev/null; then
+    print_info "Installing yay..."
+    git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+    (cd /tmp/yay-bin && makepkg -si --noconfirm)
+    print_status "yay installed"
+fi
 
 # Install Docker
 print_info "Installing Docker..."
-sudo pacman -S --needed --noconfirm docker docker-compose
-sudo systemctl enable docker
-sudo systemctl start docker
-sudo usermod -aG docker $USER
+sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
 print_status "Docker installed: $(docker --version)"
-print_info "You may need to log out and back in for Docker group permissions to take effect"
 
 # Install Go
 print_info "Installing Go..."
@@ -56,66 +63,17 @@ print_info "Installing Terraform..."
 sudo pacman -S --needed --noconfirm terraform
 print_status "Terraform installed: $(terraform --version | head -n1)"
 
-# Install SDKMAN
-print_info "Installing SDKMAN..."
-if [ ! -d "$HOME/.sdkman" ]; then
-    curl -s "https://get.sdkman.io" | bash
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    print_status "SDKMAN installed"
-else
-    print_status "SDKMAN already installed"
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-fi
-
-# Install Java 21 via SDKMAN
-print_info "Installing Java 21 via SDKMAN..."
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install java 21.0.1-tem || true
-sdk default java 21.0.1-tem
-print_status "Java installed: $(java -version 2>&1 | head -n1)"
-
-# Install Maven via SDKMAN
-print_info "Installing Maven via SDKMAN..."
-sdk install maven || true
-print_status "Maven installed: $(mvn --version | head -n1)"
-
-# Install Gradle via SDKMAN
-print_info "Installing Gradle via SDKMAN..."
-sdk install gradle || true
-print_status "Gradle installed: $(gradle --version | head -n1)"
-
-# Install NVM
-print_info "Installing NVM..."
-if [ ! -d "$HOME/.nvm" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    print_status "NVM installed"
-else
-    print_status "NVM already installed"
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-fi
-
-# Install Node.js 21 via NVM
-print_info "Installing Node.js 21 via NVM..."
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-nvm install 21
-nvm use 21
-nvm alias default 21
-print_status "Node.js installed: $(node --version)"
-print_status "npm installed: $(npm --version)"
+# Install Kubernetes tools
+print_info "Installing kubectl, Helm, k9s, kind, trivy..."
+sudo pacman -S --needed --noconfirm kubectl helm k9s kind trivy
+print_status "kubectl installed: $(kubectl version --client 2>/dev/null | head -n1)"
 
 # Install k3s (lightweight Kubernetes)
 print_info "Installing k3s..."
 if ! command -v k3s &> /dev/null; then
-    curl -sfL https://get.k3s.io | sh -
-    sudo systemctl enable k3s
-    sudo systemctl start k3s
-    # Allow current user to use kubectl via k3s kubeconfig
     sudo mkdir -p /etc/rancher/k3s
-    echo "write-kubeconfig-mode: \"0644\"" | sudo tee /etc/rancher/k3s/config.yaml
+    echo 'write-kubeconfig-mode: "0644"' | sudo tee /etc/rancher/k3s/config.yaml
+    curl -sfL https://get.k3s.io | sh -
     mkdir -p "$HOME/.kube"
     sudo cp /etc/rancher/k3s/k3s.yaml "$HOME/.kube/config"
     sudo chown "$USER:$USER" "$HOME/.kube/config"
@@ -124,111 +82,78 @@ else
     print_status "k3s already installed: $(k3s --version | head -n1)"
 fi
 
-# Install kubectl
-print_info "Installing kubectl..."
-sudo pacman -S --needed --noconfirm kubectl
-print_status "kubectl installed: $(kubectl version --client 2>/dev/null | head -n1)"
-
-# Install Google Cloud CLI (via AUR)
-print_info "Installing Google Cloud CLI..."
-if ! command -v gcloud &> /dev/null; then
-    yay -S --needed --noconfirm google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin
-    print_status "Google Cloud CLI installed: $(gcloud --version | head -n1)"
-else
-    print_status "Google Cloud CLI already installed: $(gcloud --version | head -n1)"
+# Install SDKMAN
+print_info "Installing SDKMAN..."
+if [ ! -d "$HOME/.sdkman" ]; then
+    curl -s "https://get.sdkman.io?rcupdate=false" | bash
 fi
+export sdkman_auto_answer=true
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+print_status "SDKMAN ready"
 
-# Install Python (system + pyenv for version management)
+# Install Java 21 + 25 (Temurin), Maven, Gradle via SDKMAN — latest patch versions
+print_info "Installing Java, Maven, Gradle via SDKMAN..."
+for MAJOR in 21 25; do
+    JAVA_ID=$(sdk list java | grep -oE " ${MAJOR}(\.[0-9]+)*-tem" | head -n1 | tr -d ' ')
+    sdk install java "$JAVA_ID" || true
+done
+sdk default java "$JAVA_ID"
+sdk install maven || true
+sdk install gradle || true
+print_status "Java installed: $(java -version 2>&1 | head -n1)"
+print_status "Maven installed: $(mvn --version | head -n1)"
+print_status "Gradle installed: $(gradle --version | grep Gradle)"
+
+# Install NVM + Node.js LTS
+print_info "Installing NVM..."
+if [ ! -d "$HOME/.nvm" ]; then
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash
+fi
+export NVM_DIR="$HOME/.nvm"
+set +e # nvm returns non-zero codes while loading, set -e would end the script silently
+source "$NVM_DIR/nvm.sh"
+nvm install --lts && nvm alias default 'lts/*'
+NVM_STATUS=$?
+set -e
+[ "$NVM_STATUS" -eq 0 ] || { print_error "Node.js installation failed"; exit 1; }
+print_status "Node.js installed: $(node --version), npm $(npm --version)"
+
+# Install Python
 print_info "Installing Python..."
 sudo pacman -S --needed --noconfirm python python-pip python-virtualenv
 print_status "Python installed: $(python --version)"
 
-print_info "Installing pyenv..."
-if [ ! -d "$HOME/.pyenv" ]; then
-    curl https://pyenv.run | bash
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
-    print_status "pyenv installed"
-else
-    print_status "pyenv already installed"
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
+# Install Google Cloud CLI (via AUR)
+print_info "Installing Google Cloud CLI..."
+yay -S --needed --noconfirm google-cloud-cli google-cloud-cli-gke-gcloud-auth-plugin
+print_status "Google Cloud CLI installed: $(gcloud --version | head -n1)"
+
+# Install virtualization (QEMU/KVM + virt-manager, UEFI + TPM for Windows guests)
+print_info "Installing QEMU/KVM + virt-manager..."
+sudo pacman -S --needed --noconfirm qemu-desktop libvirt virt-manager edk2-ovmf swtpm dnsmasq
+sudo systemctl enable --now libvirtd
+sudo usermod -aG libvirt "$USER"
+print_status "libvirt installed: $(virsh --version)"
+
+# Install editors (via AUR)
+print_info "Installing JetBrains Toolbox and VS Code..."
+yay -S --needed --noconfirm jetbrains-toolbox visual-studio-code-bin
+print_status "JetBrains Toolbox and VS Code installed"
+
+# Install Claude Code (native installer → ~/.local/bin/claude, updates itself)
+print_info "Installing Claude Code..."
+if ! command -v claude &> /dev/null && [ ! -x "$HOME/.local/bin/claude" ]; then
+    curl -fsSL https://claude.ai/install.sh | bash
 fi
-
-# Add pyenv to shell config if not already there
-for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    if [ -f "$RC" ] && ! grep -q "pyenv" "$RC"; then
-        cat >> "$RC" <<'EOF'
-
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-EOF
-    fi
-done
-
-# Install yay (AUR helper) if not present
-print_info "Checking for yay (AUR helper)..."
-if ! command -v yay &> /dev/null; then
-    print_info "Installing yay..."
-    cd /tmp
-    git clone https://aur.archlinux.org/yay.git
-    cd yay
-    makepkg -si --noconfirm
-    cd ~
-    print_status "yay installed"
-else
-    print_status "yay already installed"
-fi
-
-# Install JetBrains Toolbox
-print_info "Installing JetBrains Toolbox..."
-if ! command -v jetbrains-toolbox &> /dev/null; then
-    yay -S --needed --noconfirm jetbrains-toolbox
-    print_status "JetBrains Toolbox installed"
-    print_info "Launch Toolbox from your applications menu to install IntelliJ IDEA, GoLand, or other JetBrains IDEs"
-else
-    print_status "JetBrains Toolbox already installed"
-fi
+print_status "Claude Code installed: $("$HOME/.local/bin/claude" --version)"
 
 echo ""
 echo "=================================="
 print_status "Installation Complete!"
 echo "=================================="
 echo ""
-echo "Installed tools:"
-echo "  - Git: $(git --version)"
-echo "  - Docker: $(docker --version)"
-echo "  - Go: $(go version)"
-echo "  - Terraform: $(terraform --version | head -n1)"
-echo "  - SDKMAN: Installed at ~/.sdkman"
-echo "  - Java: $(source ~/.sdkman/bin/sdkman-init.sh && java -version 2>&1 | head -n1)"
-echo "  - Maven: $(source ~/.sdkman/bin/sdkman-init.sh && mvn --version | head -n1)"
-echo "  - NVM: Installed at ~/.nvm"
-echo "  - Node.js: $(source ~/.nvm/nvm.sh && node --version)"
-echo "  - npm: $(source ~/.nvm/nvm.sh && npm --version)"
-echo "  - Python: $(python --version)"
-echo "  - pip: $(pip --version | head -n1)"
-echo "  - pyenv: $($HOME/.pyenv/bin/pyenv --version 2>/dev/null || echo 'installed')"
-echo "  - k3s: $(k3s --version | head -n1)"
-echo "  - kubectl: $(kubectl version --client 2>/dev/null | head -n1)"
-echo "  - Google Cloud CLI: $(gcloud --version | head -n1)"
-echo "  - GKE auth plugin: installed"
-echo "  - yay: AUR helper"
-echo "  - JetBrains Toolbox: installed"
-echo ""
-print_info "IMPORTANT: Please run the following command or restart your terminal:"
-echo "  source ~/.bashrc"
-echo ""
-print_info "If you use zsh, also run:"
-echo "  source ~/.zshrc"
-echo ""
-print_info "For Docker permissions to take effect, log out and back in."
-echo ""
-print_info "To install IntelliJ IDEA or GoLand:"
-echo "  1. Launch JetBrains Toolbox from your applications menu"
-echo "  2. Sign in with your JetBrains account"
-echo "  3. Install IntelliJ IDEA Ultimate and/or GoLand from the Toolbox"
+print_info "Log out and back in (docker + libvirt groups), then:"
+echo "  gcloud init      # Google Cloud login"
+echo "  gh auth login    # GitHub login"
+echo "  claude           # Claude Code login"
+echo "  jetbrains-toolbox  # install IntelliJ IDEA / GoLand"

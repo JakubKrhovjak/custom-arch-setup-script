@@ -1,0 +1,63 @@
+# Prompt ve stylu dřívějšího powerlevel10k od Manjara: dva řádky, vlevo OS / adresář / git, vpravo stav a časy.
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = true
+
+format = """
+[╭─](242)$os$directory$git_branch$git_state$git_status$fill$status$cmd_duration$jobs$java$nodejs$python$golang$kubernetes$time[─╮](242)
+[╰─](242)$character"""
+
+[fill]
+symbol = " "
+
+[os]
+disabled = false
+format = "[$symbol ]($style)"
+style = "bold blue"
+
+[os.symbols]
+Arch = "\uf303"
+
+[directory]
+format = "[ $path ]($style)[$read_only]($read_only_style)"
+style = "bold fg:#fcfcfc bg:#1d99f3"
+read_only = " \uf023"
+truncation_length = 4
+truncate_to_repo = false
+
+[git_branch]
+format = "[ $symbol$branch ]($style)"
+symbol = "\ue0a0 "
+style = "fg:#1e2229 bg:#44853a"
+
+[git_status]
+format = "([$all_status$ahead_behind ]($style))"
+style = "fg:#1e2229 bg:#f67400"
+
+[status]
+disabled = false
+format = "[ $symbol$status ]($style)"
+symbol = "✘ "
+style = "fg:#fcfcfc bg:#ed1515"
+
+[cmd_duration]
+min_time = 3_000
+format = "[ \uf252 $duration ]($style)"
+style = "fg:#1e2229 bg:#fdbc4b"
+
+[jobs]
+format = "[ $symbol$number ]($style)"
+style = "fg:#1abc9c"
+
+[kubernetes]
+disabled = true
+
+[time]
+disabled = false
+format = "[ \uf017 $time ]($style)"
+time_format = "%H:%M:%S"
+style = "fg:#bbbbbb bg:#2e3439"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"

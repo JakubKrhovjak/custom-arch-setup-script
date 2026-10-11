@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Minimal Arch Linux Installation Script
-# Run from Arch ISO live environment
-# Usage: bash arch-install.sh
+# Minimal Arch Linux installer: LUKS2 + btrfs + systemd-boot with UKI, minimal KDE Plasma.
+# Run from the Arch ISO live environment: bash arch-install.sh
+# After first login: bash ~/arch-setup/post-install.sh (look & feel), then setup-script.sh (dev tools),
+# optionally secureboot-tpm2.sh (Secure Boot + unlocking the disk via TPM2).
 
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,8 +18,20 @@ ok()      { echo -e "${GREEN}[✓]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 die()     { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+read_secret() { # prompt, variable name
+    local first second
+    while true; do
+        read -rsp "$1: " first; echo
+        read -rsp "$1 (again): " second; echo
+        [ -n "$first" ] && [ "$first" = "$second" ] && break
+        warn "Empty or not matching, try again"
+    done
+    printf -v "$2" '%s' "$first"
+}
+
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 [ "$(id -u)" -eq 0 ] || die "Run as root (from Arch ISO)"
+[ -d /sys/firmware/efi ] || die "UEFI boot required (systemd-boot + UKI)"
 ping -c1 archlinux.org &>/dev/null || die "No internet connection"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -28,249 +41,225 @@ echo -e "${CYAN}   Minimal Arch Linux Installer       ${NC}"
 echo -e "${CYAN}══════════════════════════════════════${NC}"
 echo ""
 
-# List available disks
-lsblk -d -o NAME,SIZE,TYPE | grep disk
+lsblk -d -o NAME,SIZE,MODEL | grep -v '^loop'
 echo ""
-
-read -rp "Target disk (e.g. sda, nvme0n1): " DISK
+read -rp "Target disk (e.g. nvme0n1, sda): " DISK
 DISK="/dev/${DISK}"
 [ -b "$DISK" ] || die "Disk $DISK not found"
 
-read -rp "Hostname: " HOSTNAME
-read -rp "Username: " USERNAME
-read -rsp "User password: " USER_PASS; echo
-read -rsp "Root password: " ROOT_PASS; echo
-read -rp "Timezone [Europe/Prague]: " TIMEZONE
-TIMEZONE="${TIMEZONE:-Europe/Prague}"
+read -rp "Hostname [redo]: " HOSTNAME
+HOSTNAME="${HOSTNAME:-redo}"
+read -rp "Username [redo]: " USERNAME
+USERNAME="${USERNAME:-redo}"
+read_secret "User password" USER_PASS
+read_secret "Disk encryption passphrase" LUKS_PASS
 
-read -rp "Locale [en_US.UTF-8]: " LOCALE
-LOCALE="${LOCALE:-en_US.UTF-8}"
-read -rp "Console keymap (e.g. cz, cz-qwerty) [cz]: " KEYMAP
-KEYMAP="${KEYMAP:-cz}"
-
-
-read -rp "Data disk to mount at /data (e.g. sdb, leave blank to skip): " DATA_DISK
-if [ -n "$DATA_DISK" ]; then
-    DATA_DISK="/dev/${DATA_DISK}"
-    [ -b "$DATA_DISK" ] || die "Data disk $DATA_DISK not found"
-fi
-
-# Detect UEFI
-if [ -d /sys/firmware/efi ]; then
-    BOOT_MODE="uefi"
-    info "Boot mode: UEFI"
+# Secure Boot: keys can be enrolled only when the firmware is in setup mode (BIOS → Secure Boot → delete keys)
+SB_STATE=$(bootctl status 2>/dev/null | sed -n 's/^\s*Secure Boot:\s*//p')
+if [[ "$SB_STATE" == *setup* ]]; then
+    SECURE_BOOT=yes
+    info "Firmware in setup mode → Secure Boot keys + TPM2 unlock will be set up"
 else
-    BOOT_MODE="bios"
-    info "Boot mode: BIOS/Legacy"
+    SECURE_BOOT=no
+    warn "Firmware not in setup mode ($SB_STATE) → no Secure Boot (later: secureboot-tpm2.sh)"
 fi
 
-warn "This will ERASE all data on $DISK. Continue? (yes/no)"
+TIMEZONE="Europe/Prague"
+KEYMAP="us"
+ESP_SIZE="1GiB" # UKI ~75 MB each (linux + linux-lts)
+
+warn "This will ERASE all data on $DISK. Type 'yes' to continue:"
 read -r CONFIRM
 [ "$CONFIRM" = "yes" ] || die "Aborted."
 
 # ── Partitioning ───────────────────────────────────────────────────────────────
 info "Partitioning $DISK..."
+parted -s "$DISK" \
+    mklabel gpt \
+    mkpart ESP fat32 1MiB "$ESP_SIZE" \
+    set 1 esp on \
+    mkpart root "$ESP_SIZE" 100%
 
-if [ "$BOOT_MODE" = "uefi" ]; then
-    parted -s "$DISK" \
-        mklabel gpt \
-        mkpart ESP fat32 1MiB 513MiB \
-        set 1 esp on \
-        mkpart root ext4 513MiB 100%
-
-    # Partition naming: nvme uses p1/p2, sda uses 1/2
-    if [[ "$DISK" == *"nvme"* ]]; then
-        EFI_PART="${DISK}p1"
-        ROOT_PART="${DISK}p2"
-    else
-        EFI_PART="${DISK}1"
-        ROOT_PART="${DISK}2"
-    fi
-
-    info "Formatting EFI partition..."
-    mkfs.fat -F32 "$EFI_PART"
+# Partition naming: nvme uses p1/p2, sda uses 1/2
+if [[ "$DISK" == *"nvme"* ]]; then
+    EFI_PART="${DISK}p1"
+    ROOT_PART="${DISK}p2"
 else
-    parted -s "$DISK" \
-        mklabel msdos \
-        mkpart primary ext4 1MiB 100% \
-        set 1 boot on
-
-    if [[ "$DISK" == *"nvme"* ]]; then
-        ROOT_PART="${DISK}p1"
-    else
-        ROOT_PART="${DISK}1"
-    fi
+    EFI_PART="${DISK}1"
+    ROOT_PART="${DISK}2"
 fi
+udevadm settle
 
-info "Formatting root partition..."
-mkfs.ext4 -F "$ROOT_PART"
+info "Formatting EFI partition..."
+mkfs.fat -F32 "$EFI_PART"
 
-# ── Mounting ───────────────────────────────────────────────────────────────────
-info "Mounting partitions..."
-mount "$ROOT_PART" /mnt
+info "Encrypting root partition (LUKS2, Argon2id)..."
+printf '%s' "$LUKS_PASS" | cryptsetup luksFormat --type luks2 --pbkdf argon2id --batch-mode "$ROOT_PART" -
+printf '%s' "$LUKS_PASS" | cryptsetup open --key-file=- "$ROOT_PART" root
+LUKS_UUID=$(blkid -s UUID -o value "$ROOT_PART")
 
-if [ "$BOOT_MODE" = "uefi" ]; then
-    mkdir -p /mnt/boot/efi
-    mount "$EFI_PART" /mnt/boot/efi
-fi
+# ── btrfs subvolumes (Timeshift layout: @ and @home) ──────────────────────────
+info "Creating btrfs subvolumes..."
+mkfs.btrfs -f /dev/mapper/root
+mount /dev/mapper/root /mnt
+for SUBVOL in @ @home @cache @log; do
+    btrfs subvolume create "/mnt/$SUBVOL"
+done
+umount /mnt
 
-if [ -n "$DATA_DISK" ]; then
-    info "Mounting data disk $DATA_DISK at /data..."
-    mkdir -p /mnt/data
-    mount "$DATA_DISK" /mnt/data
-fi
+BTRFS_OPTS="noatime,compress=zstd:1"
+mount -o "subvol=@,$BTRFS_OPTS" /dev/mapper/root /mnt
+mkdir -p /mnt/home /mnt/var/cache /mnt/var/log /mnt/boot/efi
+mount -o "subvol=@home,$BTRFS_OPTS" /dev/mapper/root /mnt/home
+mount -o "subvol=@cache,$BTRFS_OPTS" /dev/mapper/root /mnt/var/cache
+mount -o "subvol=@log,$BTRFS_OPTS" /dev/mapper/root /mnt/var/log
+mount -o umask=0077 "$EFI_PART" /mnt/boot/efi
 
 # ── Base install ───────────────────────────────────────────────────────────────
 info "Installing base system (this may take a while)..."
 pacstrap -K /mnt \
     base \
-    linux \
-    linux-firmware \
     base-devel \
+    linux \
+    linux-lts \
+    linux-firmware \
+    amd-ucode \
+    btrfs-progs \
+    cryptsetup \
+    dosfstools \
+    systemd-ukify \
+    sbctl \
+    plymouth \
+    \
     networkmanager \
-    networkmanager-wifi \
-    iwd \
-    iw \
-    wireless_tools \
-    wpa_supplicant \
     sudo \
     git \
-    flatpak \
-    vim \
+    openssh \
     man-db \
     man-pages \
+    micro \
+    htop \
+    wget \
+    curl \
+    zip \
+    unzip \
+    rsync \
+    jq \
+    tree \
+    usbutils \
+    ntfs-3g \
+    exfatprogs \
+    wl-clipboard \
     \
-    terminus-font \
+    zram-generator \
+    earlyoom \
+    timeshift \
     \
-    noto-fonts \
-    noto-fonts-extra \
-    noto-fonts-emoji \
-    noto-fonts-cjk \
-    \
-    ttf-dejavu \
-    ttf-liberation \
-    ttf-freefont \
-    gnu-free-fonts \
-    ttf-linux-libertine \
-    ttf-carlito \
-    ttf-croscore \
-    \
-    ttf-hack \
-    ttf-fira-code \
-    ttf-cascadia-code \
-    ttf-jetbrains-mono \
-    ttf-inconsolata \
-    adobe-source-code-pro-fonts \
-    \
-    ttf-ubuntu-font-family \
-    cantarell-fonts \
-    adobe-source-sans-fonts \
-    adobe-source-serif-fonts \
-    \
-    plasma-meta \
-    kde-applications-meta \
-    sddm \
-    xdg-user-dirs \
     mesa \
-    libva-mesa-driver \
-    vulkan-icd-loader \
-    \
-    firefox \
-    chromium \
-    \
-    vlc \
-    mpv \
-    \
-    ark \
-    p7zip \
-    unrar \
-    \
-    cups \
-    system-config-printer \
-    \
-    bluez \
-    bluez-utils \
-    bluedevil \
+    vulkan-radeon \
     \
     pipewire \
     pipewire-alsa \
     pipewire-pulse \
-    pipewire-jack \
     wireplumber \
-    pavucontrol \
+    bluez \
+    bluez-utils \
     \
-    spectacle \
-    gwenview \
-    okular \
+    plasma-desktop \
+    plasma-nm \
+    plasma-pa \
+    bluedevil \
+    powerdevil \
+    power-profiles-daemon \
+    kscreen \
+    kwallet-pam \
+    ksshaskpass \
+    kde-gtk-config \
+    breeze-gtk \
+    xdg-desktop-portal-kde \
+    plasma-systemmonitor \
+    kinfocenter \
+    sddm \
+    sddm-kcm \
+    plymouth-kcm \
+    xdg-user-dirs \
+    \
+    ghostty \
+    dolphin \
+    kio-extras \
+    ffmpegthumbs \
+    kdegraphics-thumbnailers \
     kate \
-    \
+    okular \
+    gwenview \
+    spectacle \
+    ark \
+    7zip \
     filelight \
     kcalc \
+    firefox \
+    vlc \
+    flatpak \
     \
-    wget \
-    curl \
-    htop \
-    zip \
-    unzip \
-    openssh \
-    usbutils \
-    ntfs-3g \
-    exfatprogs \
+    cups \
+    print-manager \
     \
     zsh \
-    zsh-syntax-highlighting \
-    zsh-autosuggestions \
     zsh-completions \
+    zsh-autosuggestions \
+    zsh-syntax-highlighting \
+    zsh-history-substring-search \
     starship \
     \
-    \
-    hunspell \
-    hunspell-cs \
-    hunspell-en_us \
-    \
-    libreoffice-fresh \
-    libreoffice-fresh-cs
-
-# ── AMD GPU drivers ─────────────────────────────────────────────────────────────
-info "Installing AMD GPU drivers..."
-pacstrap -K /mnt \
-    xf86-video-amdgpu \
-    vulkan-radeon \
-    libva-mesa-driver \
-    mesa-vdpau \
-    radeontop
-ok "AMD drivers installed (amdgpu, Vulkan, VA-API, VDPAU)"
+    terminus-font \
+    noto-fonts \
+    noto-fonts-emoji \
+    ttf-dejavu \
+    ttf-liberation \
+    ttf-hack-nerd
 
 # ── fstab ──────────────────────────────────────────────────────────────────────
 info "Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
+# no subvolid: after a Timeshift restore @ has another id and the system would not boot
+sed -i -E 's/,?subvolid=[0-9]+//' /mnt/etc/fstab
+echo "tmpfs /tmp tmpfs noatime,mode=1777 0 0" >> /mnt/etc/fstab
+
+# ── Initramfs + UKI ────────────────────────────────────────────────────────────
+info "Configuring initramfs and unified kernel images..."
+# systemd-based initramfs: sd-encrypt reads /etc/crypttab.initramfs (TPM2 unlock is added by secureboot-tpm2.sh)
+sed -i 's/^HOOKS=.*/HOOKS=(base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems)/' /mnt/etc/mkinitcpio.conf
+echo "root UUID=${LUKS_UUID} none luks" > /mnt/etc/crypttab.initramfs
+mkdir -p /mnt/etc/kernel
+echo "root=/dev/mapper/root rootflags=subvol=@ rw quiet splash udev.log_priority=3" > /mnt/etc/kernel/cmdline
+
+for KERNEL in linux linux-lts; do
+    cat > "/mnt/etc/mkinitcpio.d/${KERNEL}.preset" <<EOF
+# mkinitcpio preset for '${KERNEL}': UKI for systemd-boot
+ALL_kver="/boot/vmlinuz-${KERNEL}"
+PRESETS=('default')
+default_uki="/boot/efi/EFI/Linux/arch-${KERNEL}.efi"
+EOF
+done
+mkdir -p /mnt/boot/efi/EFI/Linux
 
 # ── Chroot configuration ───────────────────────────────────────────────────────
 info "Configuring system inside chroot..."
 
 arch-chroot /mnt /bin/bash <<CHROOT
-set -e
+set -euo pipefail
 
 # Timezone
 ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
 hwclock --systohc
 
-# Locale — English primary, Czech secondary (both generated, system uses English)
-{
-    echo "en_US.UTF-8 UTF-8"
-    echo "cs_CZ.UTF-8 UTF-8"
-} >> /etc/locale.gen
+# Locale — English system, Czech formats are set per user in Plasma
+sed -i -E 's/^#(en_US.UTF-8 UTF-8|cs_CZ.UTF-8 UTF-8)/\1/' /etc/locale.gen
 locale-gen
-cat > /etc/locale.conf <<EOF
-LANG=en_US.UTF-8
-LANGUAGE=en_US:cs_CZ
-EOF
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
-# Console keymap and font (Terminus looks great at hi-res too)
-cat > /etc/vconsole.conf <<EOF
-KEYMAP=${KEYMAP}
-FONT=ter-132b
-EOF
+# Console keymap and font
+printf 'KEYMAP=${KEYMAP}\nFONT=ter-132b\n' > /etc/vconsole.conf
 
 # Hostname
 echo "${HOSTNAME}" > /etc/hostname
@@ -280,171 +269,141 @@ cat >> /etc/hosts <<EOF
 127.0.1.1   ${HOSTNAME}.localdomain ${HOSTNAME}
 EOF
 
-# Root password
-echo "root:${ROOT_PASS}" | chpasswd
-
-# Create user with zsh as default shell
+# User with zsh; root stays locked (sudo via wheel)
 useradd -m -G wheel -s /usr/bin/zsh "${USERNAME}"
-echo "${USERNAME}:${USER_PASS}" | chpasswd
-
-# Setup zsh config
-cat > /home/${USERNAME}/.zshrc <<'ZSHRC'
-# History
-HISTSIZE=10000
-SAVEHIST=10000
-HISTFILE=~/.zsh_history
-setopt HIST_IGNORE_DUPS HIST_IGNORE_SPACE SHARE_HISTORY
-
-# Autocompletion
-autoload -Uz compinit && compinit
-zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
-
-# Plugins
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-# Starship prompt
-eval "$(starship init zsh)"
-
-# Aliases
-alias ls='ls --color=auto'
-alias ll='ls -lah --color=auto'
-alias la='ls -A --color=auto'
-alias grep='grep --color=auto'
-alias k=kubectl
-alias ..='cd ..'
-alias ...='cd ../..'
-
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)" 2>/dev/null || true
-ZSHRC
-
-chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.zshrc
-
-# Starship config — nice colorful preset
-mkdir -p /home/${USERNAME}/.config
-cat > /home/${USERNAME}/.config/starship.toml <<'STARSHIP'
-format = """
-[╭─](bold green)$os$username$hostname$directory$git_branch$git_status$python$nodejs$java$golang
-[╰─](bold green)$character"""
-
-[os]
-disabled = false
-style = "bold blue"
-
-[username]
-style_user = "bold yellow"
-show_always = true
-
-[hostname]
-ssh_only = false
-style = "bold cyan"
-
-[directory]
-style = "bold cyan"
-truncation_length = 4
-
-[git_branch]
-style = "bold purple"
-
-[git_status]
-style = "bold red"
-
-[character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-STARSHIP
-
-chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config
-
-# Set wallpaper (Next — same as Manjaro default, from breeze package)
-mkdir -p /home/${USERNAME}/.config
-cat > /home/${USERNAME}/.config/plasma-org.kde.plasma.desktop-appletsrc <<'WALLPAPER'
-[Containments][1][Wallpaper][org.kde.image][General]
-Image=/usr/share/wallpapers/Next/
-WALLPAPER
-chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/plasma-org.kde.plasma.desktop-appletsrc
-
-# Sudo for wheel group
+passwd -l root
+# emergency / rescue shell even with root locked (otherwise "root account is locked" → only a live USB helps)
+for UNIT in emergency rescue; do
+    mkdir -p /etc/systemd/system/\${UNIT}.service.d
+    printf '[Service]\\nEnvironment=SYSTEMD_SULOGIN_FORCE=1\\n' > /etc/systemd/system/\${UNIT}.service.d/sulogin-force.conf
+done
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-# Pacman tuning — color, parallel downloads, multilib
+# Pacman tuning
 sed -i 's/^#Color/Color/' /etc/pacman.conf
 sed -i 's/^#ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
-sed -i '/^#\[multilib\]/{N;s/#\[multilib\]\n#Include/\[multilib\]\nInclude/}' /etc/pacman.conf
-pacman -Sy --noconfirm
 
-# Install yay (AUR helper)
-cd /tmp
-git clone https://aur.archlinux.org/yay.git
-chown -R ${USERNAME}:${USERNAME} /tmp/yay
-cd /tmp/yay
-sudo -u ${USERNAME} makepkg -si --noconfirm
-cd /
+# zram swap (8 GB, zstd) — earlyoom kills the biggest process before the system freezes
+printf '[zram0]\nzram-size = 8192\ncompression-algorithm = zstd\nswap-priority = 100\n' > /etc/systemd/zram-generator.conf
+
+# Boot splash: firmware logo
+plymouth-set-default-theme bgrt
+
+# SDDM: Breeze greeter on KWin Wayland (no Xorg installed), no autologin;
+# post-install.sh gives it the Simpleton look
+mkdir -p /etc/sddm.conf.d
+cat > /etc/sddm.conf.d/10-wayland.conf <<'EOF'
+[General]
+DisplayServer=wayland
+GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell
+
+[Wayland]
+CompositorCommand=kwin_wayland --drm --no-lockscreen --no-global-shortcuts --locale1
+EOF
+printf '[Theme]\nCurrent=breeze\nCursorTheme=breeze_cursors\n' > /etc/sddm.conf.d/kde_settings.conf
+
+# UKIs + systemd-boot (finds UKIs in EFI/Linux on its own)
+mkinitcpio -P
+bootctl install --esp-path=/boot/efi
+printf 'default arch-linux.efi\ntimeout 3\nconsole-mode max\neditor no\n' > /boot/efi/loader/loader.conf
+# initramfs images from the default presets (pacstrap) — not used with UKIs
+rm -f /boot/initramfs-*.img
 
 # Flatpak — enable Flathub
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# Enable services
-systemctl enable NetworkManager
-systemctl enable iwd
-systemctl enable sddm
-systemctl enable bluetooth
-systemctl enable cups
-
-# Bootloader
+# Services
+systemctl enable NetworkManager bluetooth sddm cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon
 CHROOT
 
-# ── Bootloader ─────────────────────────────────────────────────────────────────
-if [ "$BOOT_MODE" = "uefi" ]; then
-    info "Installing systemd-boot (UEFI)..."
-    arch-chroot /mnt bootctl install
+printf '%s:%s\n' "$USERNAME" "$USER_PASS" | arch-chroot /mnt chpasswd
 
-    ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
+# ── Secure Boot (own keys + Microsoft) and TPM2 unlock on first boot ──────────
+if [ "$SECURE_BOOT" = yes ]; then
+    info "Secure Boot: creating keys, signing, enrolling to firmware..."
+    arch-chroot /mnt /bin/bash <<'SECUREBOOT'
+set -euo pipefail
+sbctl create-keys
+# -s = save to the sbctl database → pacman / mkinitcpio hooks sign new versions too
+for f in /boot/efi/EFI/Linux/*.efi /boot/efi/EFI/systemd/systemd-bootx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI; do
+    sbctl sign -s "$f"
+done
+# signed source → systemd-boot-update copies an already signed loader to the ESP
+sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+sbctl verify
+# Microsoft keys: GPU option ROMs are signed by Microsoft (without them the screen may stay black)
+sbctl enroll-keys --microsoft
+SECUREBOOT
 
-    # Loader config
-    cat > /mnt/boot/efi/loader/loader.conf <<EOF
-default arch.conf
-timeout 3
-console-mode max
-editor no
-EOF
+    # TPM2 can be enrolled only in the booted system with Secure Boot on (PCR 7 = Secure Boot state).
+    # Temporary key on the encrypted root → first boot with Secure Boot enrolls TPM2 without asking
+    # for the passphrase, then removes this key from the LUKS header and the disk.
+    info "Preparing TPM2 enrollment for the first boot with Secure Boot..."
+    ENROLL_KEY=/mnt/etc/tpm2-enroll.key
+    (umask 077 && head -c 64 /dev/urandom > "$ENROLL_KEY")
+    printf '%s' "$LUKS_PASS" | cryptsetup luksAddKey --key-file=- "$ROOT_PART" "$ENROLL_KEY"
 
-    # Boot entry
-    mkdir -p /mnt/boot/efi/loader/entries
-    cat > /mnt/boot/efi/loader/entries/arch.conf <<EOF
-title   Arch Linux
-linux   /vmlinuz-linux
-initrd  /initramfs-linux.img
-options root=UUID=${ROOT_UUID} rw quiet
-EOF
+    cat > /mnt/usr/local/bin/tpm2-enroll <<'ENROLL'
+#!/bin/bash
+# One-shot: enroll TPM2 (PCR 7) to LUKS once Secure Boot is on, then remove the temporary key.
+set -euo pipefail
+KEY=/etc/tpm2-enroll.key
+CRYPTTAB=/etc/crypttab.initramfs
+UUID=$(sed -nE 's/^\S+\s+UUID=(\S+).*/\1/p' "$CRYPTTAB" | head -n1)
+DEV=/dev/disk/by-uuid/$UUID
 
-    # Copy kernel + initramfs to EFI partition
-    cp /mnt/boot/vmlinuz-linux /mnt/boot/efi/
-    cp /mnt/boot/initramfs-linux.img /mnt/boot/efi/
-    cp /mnt/boot/initramfs-linux-fallback.img /mnt/boot/efi/
+if ! bootctl status 2>/dev/null | grep -qE 'Secure Boot:\s*enabled'; then
+    echo "Secure Boot not enabled yet → enable it in BIOS; trying again at next boot"
+    exit 0
+fi
+systemd-cryptenroll --unlock-key-file="$KEY" --tpm2-device=auto --tpm2-pcrs=7 "$DEV"
+grep -q 'tpm2-device=' "$CRYPTTAB" || sed -i -E "/UUID=$UUID/s/\s*$/,tpm2-device=auto/" "$CRYPTTAB"
+mkinitcpio -P # sbctl post hook signs the new UKIs
+sbctl verify
+cryptsetup luksRemoveKey "$DEV" "$KEY"
+shred -u "$KEY"
+systemctl disable tpm2-enroll.service
+echo "TPM2 enrolled — next boot unlocks the disk without a passphrase"
+ENROLL
+    chmod 755 /mnt/usr/local/bin/tpm2-enroll
 
-else
-    info "Installing GRUB (BIOS)..."
-    arch-chroot /mnt pacman -S --needed --noconfirm grub
-    arch-chroot /mnt grub-install --target=i386-pc "$DISK"
-    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+    cat > /mnt/etc/systemd/system/tpm2-enroll.service <<'UNIT'
+[Unit]
+Description=Enroll TPM2 for LUKS unlock (once, after Secure Boot is enabled)
+ConditionPathExists=/etc/tpm2-enroll.key
+After=local-fs.target tpm2.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tpm2-enroll
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    arch-chroot /mnt systemctl enable tpm2-enroll.service
+    ok "Secure Boot keys enrolled, TPM2 enrollment waits for the first boot with Secure Boot on"
 fi
 
-# ── Copy dev setup script to new system ───────────────────────────────────────
+# ── yay (AUR helper) — built as the user, installed as root (no sudo prompt in chroot) ──
+info "Building yay..."
+arch-chroot /mnt sudo -u "$USERNAME" bash -c 'cd ~ && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg --noconfirm'
+arch-chroot /mnt bash -c "pacman -U --noconfirm /home/${USERNAME}/yay-bin/yay-bin-*.pkg.tar.zst"
+
+# ── Copy this repo to the new system ──────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/setup-script.sh" ]; then
-    info "Copying setup-script.sh to /home/${USERNAME}/ on new system..."
-    cp "$SCRIPT_DIR/setup-script.sh" "/mnt/home/${USERNAME}/setup-script.sh"
-    arch-chroot /mnt chown "${USERNAME}:${USERNAME}" "/home/${USERNAME}/setup-script.sh"
-    arch-chroot /mnt chmod +x "/home/${USERNAME}/setup-script.sh"
-    ok "Dev setup script ready at ~/setup-script.sh — run it after first boot"
-else
-    warn "setup-script.sh not found next to arch-install.sh, skipping copy"
-fi
+info "Copying setup scripts to /home/${USERNAME}/arch-setup..."
+cp -r "$SCRIPT_DIR" "/mnt/home/${USERNAME}/arch-setup"
+
+# First login: Ghostty opens and runs post-install.sh + setup-script.sh (first-login.sh removes this when done)
+mkdir -p "/mnt/home/${USERNAME}/.config/autostart"
+cat > "/mnt/home/${USERNAME}/.config/autostart/arch-setup.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Arch setup (first login)
+Exec=ghostty --title="Arch setup" -e bash /home/${USERNAME}/arch-setup/first-login.sh
+Terminal=false
+EOF
+arch-chroot /mnt chown -R "${USERNAME}:${USERNAME}" "/home/${USERNAME}/arch-setup" "/home/${USERNAME}/.config"
 
 # ── Done ───────────────────────────────────────────────────────────────────────
 echo ""
@@ -452,19 +411,18 @@ echo -e "${GREEN}═════════════════════
 ok "Installation complete!"
 echo -e "${GREEN}══════════════════════════════════════${NC}"
 echo ""
-echo "  Disk:     $DISK"
+echo "  Disk:     $DISK (ESP $EFI_PART, LUKS2 $ROOT_PART → btrfs @ @home @cache @log)"
+echo "  Boot:     systemd-boot + UKI (linux, linux-lts)"
 echo "  Hostname: $HOSTNAME"
-echo "  User:     $USERNAME"
-echo "  Boot:     $BOOT_MODE"
-echo "  GPU:      AMD (amdgpu, Vulkan, VA-API, VDPAU)"
-echo "  Locale:   $LOCALE (+ cs_CZ.UTF-8 for paper/time/measurement)"
-echo "  Keymap:   $KEYMAP"
-echo "  Fonts:    terminus (TTY), noto (full unicode+CJK+emoji), dejavu, liberation,"
-echo "            hack, fira-code, cascadia-code, jetbrains-mono, inconsolata,"
-echo "            ubuntu, cantarell, source-sans/serif/code, freefont, libertine"
+echo "  User:     $USERNAME (root locked, use sudo)"
 echo ""
 warn "Unmount and reboot:"
-echo "  umount -R /mnt && reboot"
+echo "  umount -R /mnt && cryptsetup close root && reboot"
 echo ""
-warn "After first login, run the dev tools setup:"
-echo "  bash ~/setup-script.sh"
+if [ "$SECURE_BOOT" = yes ]; then
+    warn "On reboot: BIOS → Secure Boot → Enabled (mode Custom, do NOT restore default keys)."
+    echo "  First boot asks for the disk passphrase once, then TPM2 unlocks it."
+    echo "  No boot with Secure Boot → disable it in BIOS (keys stay), boots as before."
+fi
+warn "After first login Ghostty opens and runs the setup (look & feel + dev tools)."
+echo "  Log: ~/arch-setup/first-login.log"

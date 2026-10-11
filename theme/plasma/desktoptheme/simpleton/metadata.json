@@ -1,0 +1,13 @@
+{
+  "KPlugin": {
+    "Authors": [{ "Name": "redo" }],
+    "Category": "Plasma Theme",
+    "Description": "Breeze s prvky z Breath, bez Manjaro loga",
+    "EnabledByDefault": true,
+    "Id": "simpleton",
+    "License": "CC BY-ND (GPL in Breeze Elements)",
+    "Name": "Simpleton",
+    "Version": "1.0"
+  },
+  "X-Plasma-API": "5.0"
+}

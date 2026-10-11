@@ -1,0 +1,19 @@
+# Base zsh: options, completion, keys, plugins
+source "$HOME/.config/zsh/base.zsh"
+
+# Prompt
+command -v starship >/dev/null && eval "$(starship init zsh)"
+
+# Secrets (API tokens…) — chmod 600, never in git
+[[ -f "$HOME/.config/zsh/secrets.zsh" ]] && source "$HOME/.config/zsh/secrets.zsh"
+
+export PATH="$HOME/.local/bin:$PATH"
+alias k=kubectl
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"

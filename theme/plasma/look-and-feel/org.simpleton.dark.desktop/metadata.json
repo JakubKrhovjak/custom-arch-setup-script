@@ -1,0 +1,10 @@
+{
+  "KPackageStructure": "Plasma/LookAndFeel",
+  "KPlugin": {
+    "Authors": [{ "Name": "redo" }],
+    "Description": "Tmavé téma: barvy BreathSlate, jednobarevné ikony Simpleton",
+    "Id": "org.simpleton.dark.desktop",
+    "License": "GPLv2+",
+    "Name": "Simpleton"
+  }
+}
