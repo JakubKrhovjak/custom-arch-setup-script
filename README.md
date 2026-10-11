@@ -1,7 +1,7 @@
 # Minimal Arch Linux setup
 
 Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in the **Simpleton** look
-(monochrome icons, dark BreathSlate colors), Ghostty + zsh + Starship, and a backend dev toolchain.
+(monochrome icons, dark BreathSlate colors, rounded Klassy widgets), Ghostty + zsh + Starship, and a backend dev toolchain.
 
 | Script | Run | What it does |
 |---|---|---|
@@ -41,7 +41,7 @@ JetBrains Toolbox, VS Code, Claude Code.
 ## Layout
 
 ```
-dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config
+dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config, klassy/klassyrc (14 px corners)
 theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,
             wallpapers/Simpleton, color-schemes/BreathSlate.colors
 ```

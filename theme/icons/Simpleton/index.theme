@@ -15,7 +15,7 @@ Type=Scalable
 Size=48
 MinSize=8
 MaxSize=512
-Context=Preferences
+Context=Applications
 Type=Scalable
 
 [scalable/places]

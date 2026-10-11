@@ -24,6 +24,13 @@ sudo cp -rT "$REPO/theme/wallpapers/Simpleton" "$SHARE/wallpapers/Simpleton"
 sudo install -Dm644 "$REPO/theme/color-schemes/BreathSlate.colors" "$SHARE/color-schemes/BreathSlate.colors"
 sudo gtk-update-icon-cache -f -q "$SHARE/icons/Simpleton" || true
 
+# Klassy application style: rounded buttons and frames (Simpleton's widgetStyle). Built from AUR against
+# the installed Plasma/Qt — the -bin package breaks on newer Qt. Takes a few minutes.
+info "Installing Klassy application style (AUR build)..."
+yay -S --needed --noconfirm --removemake klassy-git
+mkdir -p "$HOME/.config/klassy"
+cp "$REPO/dotfiles/klassy/klassyrc" "$HOME/.config/klassy/klassyrc"
+
 info "Applying Simpleton look-and-feel..."
 plasma-apply-lookandfeel -a org.simpleton.dark.desktop
 WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
