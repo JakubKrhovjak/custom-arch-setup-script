@@ -59,6 +59,13 @@ if phase 1 "sbctl keys and signatures"; then
   done
   # signed source → bootctl update / systemd-boot-update copy an already signed loader to the ESP
   sbctl sign -s -o "$SDBOOT_SRC.signed" "$SDBOOT_SRC"
+  # fwupd (BIOS updates): signed EFI binary booted without shim
+  FWUPD_EFI=/usr/lib/fwupd/efi/fwupdx64.efi
+  if [[ -f $FWUPD_EFI ]]; then
+    sbctl sign -s -o "$FWUPD_EFI.signed" "$FWUPD_EFI"
+    grep -q '^\[uefi_capsule\]' /etc/fwupd/fwupd.conf 2>/dev/null \
+      || printf '\n[uefi_capsule]\nDisableShimForSecureBoot=true\n' >> /etc/fwupd/fwupd.conf
+  fi
   sbctl verify
 fi
 

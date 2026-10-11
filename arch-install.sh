@@ -154,6 +154,12 @@ pacstrap -K /mnt \
     zram-generator \
     earlyoom \
     timeshift \
+    cronie \
+    ufw \
+    pacman-contrib \
+    reflector \
+    fwupd \
+    fwupd-efi \
     \
     mesa \
     vulkan-radeon \
@@ -243,6 +249,73 @@ EOF
 done
 mkdir -p /mnt/boot/efi/EFI/Linux
 
+# ── Timeshift: btrfs snapshots of @ (only changed blocks take space) ─────────
+# daily 3 + at boot 5 (+ before each upgrade 3, timeshift-autosnap in setup-script.sh); no weekly / monthly
+BTRFS_UUID=$(blkid -s UUID -o value /dev/mapper/root)
+mkdir -p /mnt/etc/timeshift
+cat > /mnt/etc/timeshift/timeshift.json <<EOF
+{
+  "backup_device_uuid" : "${BTRFS_UUID}",
+  "parent_device_uuid" : "${LUKS_UUID}",
+  "do_first_run" : "false",
+  "btrfs_mode" : "true",
+  "include_btrfs_home_for_backup" : "false",
+  "include_btrfs_home_for_restore" : "false",
+  "stop_cron_emails" : "true",
+  "schedule_monthly" : "false",
+  "schedule_weekly" : "false",
+  "schedule_daily" : "true",
+  "schedule_hourly" : "false",
+  "schedule_boot" : "true",
+  "count_monthly" : "0",
+  "count_weekly" : "0",
+  "count_daily" : "3",
+  "count_hourly" : "0",
+  "count_boot" : "5",
+  "date_format" : "%Y-%m-%d %H:%M:%S",
+  "exclude" : [],
+  "exclude-apps" : []
+}
+EOF
+
+# ── After a snapshot restore: rebuild UKIs when the ESP kernel has no modules in the system ──
+# Timeshift snapshots only @, the UKIs on the ESP stay newer → without this the restored system
+# boots without modules (no graphics, no network).
+cat > /mnt/usr/local/bin/uki-match-kernel <<'UKIMATCH'
+#!/usr/bin/env bash
+# Rebuilds the UKIs when the running kernel (from the ESP) has no modules in the system — typically after a snapshot restore.
+set -euo pipefail
+kver=$(uname -r)
+marker=/var/lib/uki-match-kernel/$kver
+
+[[ -d /usr/lib/modules/$kver ]] && { echo "Modules for $kver present, UKI matches."; exit 0; }
+[[ -e $marker ]] && { echo "Rebuild for $kver already tried ($marker), not again."; exit 1; }
+
+echo "Running kernel $kver has no modules → UKI on the ESP does not match the system (restored snapshot?)."
+echo "Kernels in the system: $(ls /usr/lib/modules | tr '\n' ' ')"
+mkdir -p "${marker%/*}"
+touch "$marker"
+mkinitcpio -P # sbctl post hook signs the new UKIs
+echo "UKIs rebuilt, rebooting."
+systemctl --no-block reboot
+UKIMATCH
+chmod 755 /mnt/usr/local/bin/uki-match-kernel
+
+cat > /mnt/etc/systemd/system/uki-match-kernel.service <<'UNIT'
+[Unit]
+Description=Rebuild UKIs when the ESP kernel does not match the system (after a snapshot restore)
+ConditionPathExists=!/usr/lib/modules/%v
+RequiresMountsFor=/boot /boot/efi /var/lib
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/uki-match-kernel
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 # ── Chroot configuration ───────────────────────────────────────────────────────
 info "Configuring system inside chroot..."
 
@@ -279,9 +352,31 @@ for UNIT in emergency rescue; do
 done
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
+# Pacman maintenance
+# fastest HTTPS mirrors, refreshed weekly by reflector.timer; old package versions cleaned by paccache.timer (keeps 3)
+cat > /etc/xdg/reflector/reflector.conf <<'EOF'
+--save /etc/pacman.d/mirrorlist
+--protocol https
+--country Czechia,Germany,Austria,Poland
+--latest 10
+--sort rate
+EOF
+
+mkdir -p /etc/systemd/system/paccache.service.d
+printf '[Service]\\nExecStart=\\nExecStart=/usr/bin/paccache -rk3\\nExecStart=/usr/bin/paccache -ruk0\\n' > /etc/systemd/system/paccache.service.d/uninstalled.conf
+
+# Firewall: incoming denied (except replies), outgoing allowed; rules for docker / k3s / libvirt in setup-script.sh
+sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
+
+# fwupd with Secure Boot: boot the fwupd EFI binary signed by sbctl directly, without shim
+mkdir -p /etc/fwupd
+printf '[uefi_capsule]\nDisableShimForSecureBoot=true\n' >> /etc/fwupd/fwupd.conf
+
 # Pacman tuning
 sed -i 's/^#Color/Color/' /etc/pacman.conf
 sed -i 's/^#ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+# no -debug packages from makepkg (yay, AUR builds)
+sed -i -E '/^OPTIONS=/s/([( ])debug/\\1!debug/' /etc/makepkg.conf
 
 # zram swap (8 GB, zstd) — earlyoom kills the biggest process before the system freezes
 printf '[zram0]\nzram-size = 8192\ncompression-algorithm = zstd\nswap-priority = 100\n' > /etc/systemd/zram-generator.conf
@@ -313,7 +408,7 @@ rm -f /boot/initramfs-*.img
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
 # Services
-systemctl enable NetworkManager bluetooth sddm cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon
+systemctl enable NetworkManager bluetooth sddm cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon cronie ufw paccache.timer reflector.timer uki-match-kernel
 CHROOT
 
 printf '%s:%s\n' "$USERNAME" "$USER_PASS" | arch-chroot /mnt chpasswd
@@ -330,6 +425,7 @@ for f in /boot/efi/EFI/Linux/*.efi /boot/efi/EFI/systemd/systemd-bootx64.efi /bo
 done
 # signed source → systemd-boot-update copies an already signed loader to the ESP
 sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+sbctl sign -s -o /usr/lib/fwupd/efi/fwupdx64.efi.signed /usr/lib/fwupd/efi/fwupdx64.efi # BIOS updates via fwupd
 sbctl verify
 # Microsoft keys: GPU option ROMs are signed by Microsoft (without them the screen may stay black)
 sbctl enroll-keys --microsoft
@@ -387,7 +483,7 @@ fi
 # ── yay (AUR helper) — built as the user, installed as root (no sudo prompt in chroot) ──
 info "Building yay..."
 arch-chroot /mnt sudo -u "$USERNAME" bash -c 'cd ~ && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg --noconfirm'
-arch-chroot /mnt bash -c "pacman -U --noconfirm /home/${USERNAME}/yay-bin/yay-bin-*.pkg.tar.zst"
+arch-chroot /mnt bash -c "pacman -U --noconfirm /home/${USERNAME}/yay-bin/yay-bin-[0-9]*.pkg.tar.zst"
 
 # ── Copy this repo to the new system ──────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

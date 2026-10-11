@@ -95,6 +95,7 @@ print_status "SDKMAN ready"
 print_info "Installing Java, Maven, Gradle via SDKMAN..."
 for MAJOR in 21 25; do
     JAVA_ID=$(sdk list java | grep -oE " ${MAJOR}(\.[0-9]+)*-tem" | head -n1 | tr -d ' ')
+    [ -n "$JAVA_ID" ] || { print_error "Temurin $MAJOR not found in 'sdk list java'"; exit 1; }
     sdk install java "$JAVA_ID" || true
 done
 sdk default java "$JAVA_ID"
@@ -134,6 +135,24 @@ sudo pacman -S --needed --noconfirm qemu-desktop libvirt virt-manager edk2-ovmf 
 sudo systemctl enable --now libvirtd
 sudo usermod -aG libvirt "$USER"
 print_status "libvirt installed: $(virsh --version)"
+
+# Firewall rules: incoming denied, except from local containers / VMs (they talk to services on the host)
+print_info "Configuring firewall (ufw)..."
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow from 10.42.0.0/16 comment 'k3s pods'
+sudo ufw allow from 10.43.0.0/16 comment 'k3s services'
+sudo ufw allow from 172.16.0.0/12 comment 'docker networks'
+sudo ufw allow in on virbr0 comment 'libvirt NAT (DHCP, DNS)'
+sudo ufw --force enable
+sudo systemctl enable ufw
+print_status "Firewall active: $(sudo ufw status | head -n1)"
+
+# Snapshot before every pacman upgrade (Timeshift, keeps the last 3)
+print_info "Installing timeshift-autosnap..."
+yay -S --needed --noconfirm timeshift-autosnap
+sudo sed -i -E 's/^maxSnapshots=.*/maxSnapshots=3/; s/^updateGrub=.*/updateGrub=false/' /etc/timeshift-autosnap.conf # no GRUB (systemd-boot)
+print_status "timeshift-autosnap installed (max 3 snapshots)"
 
 # Install editors (via AUR)
 print_info "Installing JetBrains Toolbox and VS Code..."

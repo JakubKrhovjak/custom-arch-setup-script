@@ -26,7 +26,8 @@ sudo gtk-update-icon-cache -f -q "$SHARE/icons/Simpleton" || true
 
 info "Applying Simpleton look-and-feel..."
 plasma-apply-lookandfeel -a org.simpleton.dark.desktop
-plasma-apply-wallpaperimage "$SHARE/wallpapers/Simpleton" || true
+WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
+plasma-apply-wallpaperimage "$WALLPAPER"
 ok "Simpleton applied"
 
 # ── Plasma settings ────────────────────────────────────────────────────────────
@@ -44,7 +45,6 @@ kwriteconfig6 --file kwinrc --group Plugins --key glideEnabled true
 
 # ── Login screen (SDDM Breeze greeter in Simpleton colors + wallpaper) ────────
 info "Login screen..."
-WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
 printf '[General]\nbackground=%s\nshowClock=true\ntype=image\n' "$WALLPAPER" \
     | sudo tee "$SHARE/sddm/themes/breeze/theme.conf.user" >/dev/null
 SDDM_CFG=/var/lib/sddm/.config
@@ -77,6 +77,11 @@ install_dotfile "$REPO/dotfiles/ghostty/config" "$HOME/.config/ghostty/config"
 ok "Dotfiles installed"
 
 xdg-user-dirs-update
+
+# ── Timeshift: creates the cron jobs (daily, at boot) from timeshift.json + the first snapshot ──
+info "Timeshift schedule + first snapshot..."
+sudo timeshift --check --scripted
+ls /etc/cron.d/ | grep timeshift
 
 echo ""
 ok "Done. Log out and back in to see everything (login screen included)."
