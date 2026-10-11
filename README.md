@@ -55,4 +55,4 @@ Secrets (API tokens) go to `~/.config/zsh/secrets.zsh` (`chmod 600`), never to t
 - Timeshift snapshots only `@`; UKIs live on the ESP. After restoring a snapshot with another kernel,
   rebuild them: `sudo mkinitcpio -P`.
 - `theme/plasma/desktoptheme/simpleton` contains unmodified SVGs from Manjaro's Breath theme (CC BY-ND);
-  the wallpaper is Ant-Dark by EliverLara (GPL-3.0).
+  the wallpaper is Ant-Dark by EliverLara (GPL-3.0), recolored to the BreathSlate palette.
