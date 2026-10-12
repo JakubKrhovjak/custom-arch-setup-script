@@ -38,12 +38,13 @@ plasma-apply-wallpaperimage "$WALLPAPER"
 ok "Simpleton applied"
 
 # ── Plasma settings ────────────────────────────────────────────────────────────
-info "Plasma settings (Ghostty, keyboard, formats, effects)..."
+info "Plasma settings (Ghostty, keyboard, Num Lock, formats, effects)..."
 kwriteconfig6 --file kdeglobals --group General --key TerminalApplication ghostty
 kwriteconfig6 --file kdeglobals --group General --key TerminalService com.mitchellh.ghostty.desktop
 kwriteconfig6 --file kxkbrc --group Layout --key Use true
 kwriteconfig6 --file kxkbrc --group Layout --key LayoutList us,cz
 kwriteconfig6 --file kxkbrc --group Layout --key VariantList ,qwerty
+kwriteconfig6 --file kcminputrc --group Keyboard --key NumLock 0   # 0 = on at Plasma start
 kwriteconfig6 --file plasma-localerc --group Formats --key LANG en_US.UTF-8
 kwriteconfig6 --file plasma-localerc --group Formats --key LC_TIME cs_CZ.UTF-8
 kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
@@ -63,7 +64,7 @@ fi
 sudo kwriteconfig6 --file "$SDDM_CFG/kdeglobals" --group Icons --key Theme Simpleton
 sudo kwriteconfig6 --file "$SDDM_CFG/kdeglobals" --group General --key ColorScheme BreathSlate
 printf '[Theme]\nname=simpleton\n' | sudo tee "$SDDM_CFG/plasmarc" >/dev/null
-printf '[Mouse]\ncursorTheme=breeze_cursors\n' | sudo tee "$SDDM_CFG/kcminputrc" >/dev/null
+printf '[Keyboard]\nNumLock=0\n\n[Mouse]\ncursorTheme=breeze_cursors\n' | sudo tee "$SDDM_CFG/kcminputrc" >/dev/null
 sudo chown sddm:sddm "$SDDM_CFG"/*
 ok "Login screen uses Simpleton"
 
