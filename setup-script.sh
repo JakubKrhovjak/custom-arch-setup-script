@@ -185,6 +185,11 @@ print_info "Installing Google Chrome (Flatpak)..."
 sudo flatpak install -y --noninteractive flathub com.google.Chrome
 print_status "Google Chrome installed"
 
+# Install WhatsApp client WasIstLos (AUR, WebKitGTK wrapper of WhatsApp Web)
+print_info "Installing WhatsApp (WasIstLos)..."
+yay -S --needed --noconfirm --removemake wasistlos
+print_status "WhatsApp (WasIstLos) installed"
+
 # Install Claude Code (native installer → ~/.local/bin/claude, updates itself)
 print_info "Installing Claude Code..."
 if ! command -v claude &> /dev/null && [ ! -x "$HOME/.local/bin/claude" ]; then

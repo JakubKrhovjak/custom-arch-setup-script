@@ -41,9 +41,24 @@ echo -e "${CYAN}   Minimal Arch Linux Installer       ${NC}"
 echo -e "${CYAN}══════════════════════════════════════${NC}"
 echo ""
 
-lsblk -d -o NAME,SIZE,MODEL | grep -v '^loop'
-echo ""
-read -rp "Target disk (e.g. nvme0n1, sda): " DISK
+# Target disk: internal disks only (no USB stick with the installer, no zram / loop / CD); TRAN last, may be empty
+mapfile -t DISKS < <(lsblk -dn -o NAME,TYPE,RO,TRAN | awk '$2 == "disk" && $3 == "0" && $4 != "usb" && $1 !~ /^zram/ {print $1}')
+describe_disk() { lsblk -dn -o SIZE,MODEL "/dev/$1" | xargs; }
+case ${#DISKS[@]} in
+    0) die "No internal disk found" ;;
+    1) DISK="${DISKS[0]}"
+       info "Only one disk: $DISK ($(describe_disk "$DISK"))" ;;
+    *) echo "Disks:"
+       for i in "${!DISKS[@]}"; do
+           echo "  $((i + 1))) ${DISKS[$i]}  $(describe_disk "${DISKS[$i]}")"
+       done
+       while true; do
+           read -rp "Install to disk number [1-${#DISKS[@]}]: " CHOICE
+           [[ "$CHOICE" =~ ^[0-9]+$ ]] && (( CHOICE >= 1 && CHOICE <= ${#DISKS[@]} )) && break
+           warn "Enter a number from the list"
+       done
+       DISK="${DISKS[$((CHOICE - 1))]}" ;;
+esac
 DISK="/dev/${DISK}"
 [ -b "$DISK" ] || die "Disk $DISK not found"
 
