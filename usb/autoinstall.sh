@@ -61,6 +61,7 @@ done
 info "Online"
 
 # copy off the FAT stick: arch-install.sh copies its own directory into the new system
+info "Copying setup scripts from the USB stick (may take a few minutes)..."
 rm -rf /root/arch-setup
 cp -r "$USB/arch-setup" /root/arch-setup
 
