@@ -87,18 +87,22 @@ print_info "Installing SDKMAN..."
 if [ ! -d "$HOME/.sdkman" ]; then
     curl -s "https://get.sdkman.io?rcupdate=false" | bash
 fi
-export sdkman_auto_answer=true
 source "$HOME/.sdkman/bin/sdkman-init.sh"
+sdkman_auto_answer=true # after init: sdkman-init.sh overwrites it from ~/.sdkman/etc/config (false)
 print_status "SDKMAN ready"
 
-# Install Java 21 + 25 (Temurin), Maven, Gradle via SDKMAN — latest patch versions
+# Install Java 21 (Temurin) + 25 (Amazon Corretto, default), Maven, Gradle via SDKMAN — latest patch versions
 print_info "Installing Java, Maven, Gradle via SDKMAN..."
-for MAJOR in 21 25; do
-    JAVA_ID=$(sdk list java | grep -oE " ${MAJOR}(\.[0-9]+)*-tem" | head -n1 | tr -d ' ')
-    [ -n "$JAVA_ID" ] || { print_error "Temurin $MAJOR not found in 'sdk list java'"; exit 1; }
+JAVA_LIST=$(sdk list java)
+for MAJOR_VENDOR in 21-tem 25-amzn; do
+    MAJOR=${MAJOR_VENDOR%%-*}
+    VENDOR=${MAJOR_VENDOR#*-}
+    # identifiers look like 21.0.12+1.1-tem, 25.0.1.0+8-amzn
+    JAVA_ID=$(grep -oE " ${MAJOR}(\.[0-9]+)*(\+[0-9.]+)?-${VENDOR}" <<<"$JAVA_LIST" | head -n1 | tr -d ' ')
+    [ -n "$JAVA_ID" ] || { print_error "Java $MAJOR-$VENDOR not found in 'sdk list java'"; exit 1; }
     sdk install java "$JAVA_ID" || true
 done
-sdk default java "$JAVA_ID"
+sdk default java "$JAVA_ID" # the last one: Corretto 25
 sdk install maven || true
 sdk install gradle || true
 print_status "Java installed: $(java -version 2>&1 | head -n1)"
@@ -123,6 +127,23 @@ print_status "Node.js installed: $(node --version), npm $(npm --version)"
 print_info "Installing Python..."
 sudo pacman -S --needed --noconfirm python python-pip python-virtualenv
 print_status "Python installed: $(python --version)"
+
+# Static analysis used by the Claude /cr skill (static-scan.py): semgrep, lizard via pipx; PMD from GitHub (AUR package is outdated)
+print_info "Installing static analysis tools (semgrep, lizard, PMD)..."
+sudo pacman -S --needed --noconfirm python-pipx
+pipx install semgrep || pipx upgrade semgrep
+pipx install lizard || pipx upgrade lizard
+if [ ! -x "$HOME/.local/bin/pmd" ]; then
+    PMD_VERSION=$(curl -fsSL https://api.github.com/repos/pmd/pmd/releases/latest | jq -r '.tag_name' | sed 's/^pmd_releases\///')
+    PMD_TMP=$(mktemp -d)
+    curl -fsSL -o "$PMD_TMP/pmd.zip" "https://github.com/pmd/pmd/releases/download/pmd_releases/$PMD_VERSION/pmd-dist-$PMD_VERSION-bin.zip"
+    mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
+    unzip -q -o "$PMD_TMP/pmd.zip" -d "$HOME/.local/opt"
+    ln -sfn "$HOME/.local/opt/pmd-bin-$PMD_VERSION" "$HOME/.local/opt/pmd"
+    ln -sfn "$HOME/.local/opt/pmd/bin/pmd" "$HOME/.local/bin/pmd"
+    rm -rf "$PMD_TMP"
+fi
+print_status "Static analysis installed: semgrep $("$HOME/.local/bin/semgrep" --version), lizard $("$HOME/.local/bin/lizard" --version), PMD in ~/.local/opt/pmd"
 
 # Install Google Cloud CLI (via AUR)
 print_info "Installing Google Cloud CLI..."

@@ -35,7 +35,7 @@ Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD G
 
 **Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Docker + Compose + Buildx, Go, Terraform,
 kubectl, Helm, k9s, kind, trivy, k3s, SDKMAN (Java 21 + 25 Temurin, Maven, Gradle), NVM (Node.js LTS),
-Python, Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
+Python, static analysis for the Claude `/cr` skill (semgrep, lizard, PMD), Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
 JetBrains Toolbox, VS Code, Claude Code.
 
 ## Layout

@@ -65,7 +65,7 @@ sudo kwriteconfig6 --file "$SDDM_CFG/kdeglobals" --group Icons --key Theme Simpl
 sudo kwriteconfig6 --file "$SDDM_CFG/kdeglobals" --group General --key ColorScheme BreathSlate
 printf '[Theme]\nname=simpleton\n' | sudo tee "$SDDM_CFG/plasmarc" >/dev/null
 printf '[Keyboard]\nNumLock=0\n\n[Mouse]\ncursorTheme=breeze_cursors\n' | sudo tee "$SDDM_CFG/kcminputrc" >/dev/null
-sudo chown sddm:sddm "$SDDM_CFG"/*
+sudo chown -R sddm:sddm "$SDDM_CFG" # no glob: /var/lib/sddm is not readable for the user, "$SDDM_CFG"/* would stay unexpanded
 ok "Login screen uses Simpleton"
 
 # ── Dotfiles (existing files are kept as *.bak) ───────────────────────────────
