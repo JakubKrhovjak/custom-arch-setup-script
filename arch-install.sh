@@ -62,10 +62,10 @@ esac
 DISK="/dev/${DISK}"
 [ -b "$DISK" ] || die "Disk $DISK not found"
 
-read -rp "Hostname [redo]: " HOSTNAME
-HOSTNAME="${HOSTNAME:-redo}"
-read -rp "Username [redo]: " USERNAME
-USERNAME="${USERNAME:-redo}"
+read -rp "Hostname [lucky]: " HOSTNAME
+HOSTNAME="${HOSTNAME:-lucky}"
+read -rp "Username [lucky]: " USERNAME
+USERNAME="${USERNAME:-lucky}"
 read_secret "User password" USER_PASS
 read_secret "Disk encryption passphrase" LUKS_PASS
 

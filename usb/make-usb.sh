@@ -62,21 +62,32 @@ mkdir -p "$MNT"
 mount "$PART" "$MNT"
 bsdtar -x -f "$ISO" -C "$MNT"
 
-info "Boot entry: start the installation by itself..."
-SCRIPT=/run/archiso/bootmnt/arch-setup/usb/autoinstall.sh
-sed -i -E "s|archisosearchuuid=\S+|archisolabel=$LABEL script=$SCRIPT|" "$MNT"/loader/entries/01-archiso-*.conf
-sed -i 's/^timeout.*/timeout 3/' "$MNT/loader/loader.conf"
-grep -h '^options' "$MNT"/loader/entries/01-archiso-*.conf
+info "Boot menu: install (default), restore Timeshift snapshot, rescue shell..."
+ENTRIES="$MNT/loader/entries"
+SCRIPTS=/run/archiso/bootmnt/arch-setup/usb
+# copied files are found by the FAT label, not by the ISO UUID;
+# copytoram=n: with the root image in RAM the live system unmounts the stick and script= would not find the scripts
+sed -i -E "s|archisosearchuuid=\S+|archisolabel=$LABEL copytoram=n|" "$ENTRIES"/*.conf
+INSTALL=$(ls "$ENTRIES"/01-archiso-*.conf)
+# script= is run by the live system on tty1 (archiso automated script)
+sed -E "s|^title.*|title    Restore Timeshift snapshot|; s|^sort-key.*|sort-key 04|; s|^(options.*)\$|\1 script=$SCRIPTS/restore-snapshot.sh|" \
+    "$INSTALL" > "$ENTRIES/04-restore-snapshot.conf"
+sed -E "s|^title.*|title    Rescue shell (live system, no script)|; s|^sort-key.*|sort-key 05|" \
+    "$INSTALL" > "$ENTRIES/05-rescue-shell.conf"
+sed -i -E "s|^title.*|title    Install Arch Linux (automatic)|; s|^(options.*)\$|\1 script=$SCRIPTS/autoinstall.sh|" "$INSTALL"
+sed -i 's/^timeout.*/timeout 5/' "$MNT/loader/loader.conf"
+grep -H -E '^(title|options)' "$ENTRIES"/*.conf | sed "s|$ENTRIES/||"
 
 info "Copying setup scripts (working tree, without .git)..."
 # FAT has no symlinks / permissions → copy the targets, no owners
 rsync -rL --exclude=.git --exclude=/pc "$REPO/" "$MNT/arch-setup/"
 
 # Wi-Fi of this PC (NetworkManager) → the installer connects by itself; the password is then on the stick
-WIFI_CONN=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | awk -F: '$2 == "802-11-wireless" {print $1; exit}')
+# by UUID: several profiles may share one name (nmcli then prints the value of each)
+WIFI_CONN=$(nmcli -t -f UUID,TYPE connection show --active 2>/dev/null | awk -F: '$2 == "802-11-wireless" {print $1; exit}')
 if [ -n "$WIFI_CONN" ]; then
-    WIFI_SSID=$(nmcli -s -g 802-11-wireless.ssid connection show "$WIFI_CONN")
-    WIFI_PASS=$(nmcli -s -g 802-11-wireless-security.psk connection show "$WIFI_CONN")
+    WIFI_SSID=$(nmcli -s -g 802-11-wireless.ssid connection show uuid "$WIFI_CONN")
+    WIFI_PASS=$(nmcli -s -g 802-11-wireless-security.psk connection show uuid "$WIFI_CONN")
     printf 'WIFI_SSID=%q\nWIFI_PASS=%q\n' "$WIFI_SSID" "$WIFI_PASS" > "$MNT/wifi.conf"
     ok "Wi-Fi \"$WIFI_SSID\" saved to the stick (wifi.conf, password in plain text)"
 else

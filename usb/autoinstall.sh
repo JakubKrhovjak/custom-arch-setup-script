@@ -69,8 +69,10 @@ if ! bash /root/arch-setup/arch-install.sh; then
     exit 1
 fi
 
-echo ""
-read -rp "Remove the USB stick, then press Enter to reboot..."
 umount -R /mnt
 cryptsetup close root
-reboot
+echo ""
+# the live system runs from the stick (copytoram=n) → pull it out only when the PC is off
+echo "Press Enter to power off. Then remove the USB stick, enable Secure Boot in BIOS and boot."
+read -r
+poweroff
