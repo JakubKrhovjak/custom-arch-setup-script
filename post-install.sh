@@ -35,7 +35,9 @@ info "Applying Simpleton look-and-feel..."
 plasma-apply-lookandfeel -a org.simpleton.dark.desktop
 WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
 plasma-apply-wallpaperimage "$WALLPAPER"
-ok "Simpleton applied"
+# panel at the top edge (Plasma default is bottom)
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript 'panels().forEach(function (p) { p.location = "top"; })'
+ok "Simpleton applied, panel at the top"
 
 # ── Plasma settings ────────────────────────────────────────────────────────────
 info "Plasma settings (Ghostty, keyboard, Num Lock, formats, effects)..."

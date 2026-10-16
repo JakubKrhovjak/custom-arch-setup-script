@@ -180,6 +180,11 @@ print_info "Installing JetBrains Toolbox and VS Code..."
 yay -S --needed --noconfirm jetbrains-toolbox visual-studio-code-bin
 print_status "JetBrains Toolbox and VS Code installed"
 
+# Install Google Chrome (Flatpak from Flathub, system-wide; Flathub is enabled by arch-install.sh)
+print_info "Installing Google Chrome (Flatpak)..."
+sudo flatpak install -y --noninteractive flathub com.google.Chrome
+print_status "Google Chrome installed"
+
 # Install Claude Code (native installer → ~/.local/bin/claude, updates itself)
 print_info "Installing Claude Code..."
 if ! command -v claude &> /dev/null && [ ! -x "$HOME/.local/bin/claude" ]; then
