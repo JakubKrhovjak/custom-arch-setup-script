@@ -24,6 +24,9 @@ sudo cp -rT "$REPO/theme/wallpapers/Simpleton" "$SHARE/wallpapers/Simpleton"
 sudo install -Dm644 "$REPO/theme/color-schemes/BreathSlate.colors" "$SHARE/color-schemes/BreathSlate.colors"
 sudo gtk-update-icon-cache -f -q "$SHARE/icons/Simpleton" || true
 
+# Parallel AUR builds: /etc/makepkg.conf leaves MAKEFLAGS commented out, so make runs on one core
+[ -f "$HOME/.makepkg.conf" ] || printf '%s\n' '# Parallel builds for makepkg / yay (AUR): use all CPU cores' 'MAKEFLAGS="-j$(nproc)"' > "$HOME/.makepkg.conf"
+
 # Klassy application style: rounded buttons and frames (Simpleton's widgetStyle). Built from AUR against
 # the installed Plasma/Qt — the -bin package breaks on newer Qt. Takes a few minutes.
 info "Installing Klassy application style (AUR build)..."

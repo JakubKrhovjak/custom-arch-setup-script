@@ -52,6 +52,9 @@ Secrets (API tokens) go to `~/.config/zsh/secrets.zsh` (`chmod 600`), never to t
 
 - The theme is installed to `/usr/share` so the SDDM login screen (user `sddm`) can read it.
   After changing the theme, run `post-install.sh` again.
+- Klassy is a C++ plugin built against the installed KDecoration/Qt. After a Plasma or Qt update rebuild it
+  (`yay -S klassy-git`) before logging in again, otherwise windows fall back to Breeze decorations.
+- AUR builds use all cores via `~/.makepkg.conf` (`MAKEFLAGS="-j$(nproc)"`, written by `post-install.sh`).
 - Timeshift snapshots only `@`; UKIs live on the ESP. After restoring a snapshot with another kernel,
   rebuild them: `sudo mkinitcpio -P`.
 - `theme/plasma/desktoptheme/simpleton` contains unmodified SVGs from Manjaro's Breath theme (CC BY-ND);
