@@ -6,7 +6,8 @@ Secure Boot keys and possibly the fTPM, so the disk asks for the LUKS passphrase
 
 ## Before
 
-1. **Board revision**: sticker on the PCB near the bottom left (`REV: 1.x`). F-series BIOS = rev 1.0/1.1/1.2.
+1. **Board revision: 1.0** (checked on the PCB 2026-10-17) → BIOS from the **rev 1.0/1.2** support page.
+   The revision is printed bottom left on the PCB; the firmware does not report it (`dmidecode` shows `x.x`).
 2. **Download** from the official page only, e.g.
    `https://www.gigabyte.com/Motherboard/X670-AORUS-ELITE-AX-rev-10-12/support` → BIOS → newest non-beta.
    Unzip; copy the BIOS file (no folder) to the root of a FAT32 USB stick. The `ARCH_202610` stick works:
