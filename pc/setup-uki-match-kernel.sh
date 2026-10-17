@@ -16,7 +16,7 @@ set -euo pipefail
 cat >/usr/local/bin/uki-match-kernel <<'EOF'
 #!/usr/bin/env bash
 # Přestaví UKI, když běžící jádro (z ESP) nemá moduly v systému — typicky po obnově snapshotu.
-# Instaluje pc/setup-uki-match-kernel.sh (repozitář manjaro-setup-script), spouští uki-match-kernel.service.
+# Instaluje pc/setup-uki-match-kernel.sh (repozitář custom-arch-setup-script), spouští uki-match-kernel.service.
 set -euo pipefail
 kver=$(uname -r)
 marker=/var/lib/uki-match-kernel/$kver
