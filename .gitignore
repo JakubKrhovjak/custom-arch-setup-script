@@ -1,1 +1,3 @@
 .idea/
+# plain rclone config must never land here; only secrets/rclone.conf.age
+rclone.conf
