@@ -189,7 +189,25 @@ print_status "Google Chrome installed"
 # Install WhatsApp client ZapZap (Flatpak, Qt WebEngine; WasIstLos from AUR needs webkit2gtk, which no longer builds)
 print_info "Installing WhatsApp (ZapZap, Flatpak)..."
 sudo flatpak install -y --noninteractive flathub com.rtosta.zapzap
-print_status "WhatsApp (ZapZap) installed"
+bash "$REPO/pc/zapzap-tray.sh"
+print_status "WhatsApp (ZapZap) installed, tray icon in Simpleton style"
+
+# Teams (Flatpak; replaces teams-for-linux from AUR) and Flatseal (Flatpak permission manager)
+print_info "Installing Teams for Linux and Flatseal (Flatpak)..."
+sudo flatpak install -y --noninteractive flathub com.github.IsmaelMartinez.teams_for_linux com.github.tchx84.Flatseal
+print_status "Teams and Flatseal installed"
+
+# Arch Assistant: tray app (updates, system health, cleanup); its installer is idempotent.
+# --no-octopi: this machine never had Octopi.
+print_info "Installing Arch Assistant..."
+AA_DIR="$HOME/projects/arch-assistant"
+if [ ! -d "$AA_DIR/.git" ]; then
+    git clone https://github.com/JakubKrhovjak/arch-assistant.git "$AA_DIR" \
+        || print_error "arch-assistant not cloned (is the GitHub repo published?); later: git clone … && $AA_DIR/install.sh"
+fi
+if [ -x "$AA_DIR/install.sh" ]; then
+    "$AA_DIR/install.sh" --no-octopi && print_status "Arch Assistant installed (starts with the session, lives in the tray)"
+fi
 
 # rclone + its config: secrets/rclone.conf.age holds ~/.config/rclone/rclone.conf (Proton Drive, Google Drive)
 # encrypted with age; the passphrase is asked for here, once. Re-encrypt with pc/rclone-conf.sh encrypt.

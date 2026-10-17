@@ -44,6 +44,8 @@ WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
 plasma-apply-wallpaperimage "$WALLPAPER"
 # panel at the top edge (Plasma default is bottom)
 qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript 'panels().forEach(function (p) { p.location = "top"; })'
+# weather widget, no Show Desktop, Bluetooth/Volume/Clipboard in the tray's hidden section, ZapZap launcher
+bash "$REPO/pc/panel-setup.sh" || info "panel layout not applied; later: bash $REPO/pc/panel-setup.sh"
 ok "Simpleton applied, panel at the top"
 
 # ── Plasma settings ────────────────────────────────────────────────────────────
