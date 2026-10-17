@@ -48,6 +48,12 @@ qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript 'pane
 bash "$REPO/pc/panel-setup.sh" || info "panel layout not applied; later: bash $REPO/pc/panel-setup.sh"
 ok "Simpleton applied, panel at the top"
 
+# Baloo (file indexer): since Plasma 6.8 baloo_file_extractor starts before WAYLAND_DISPLAY is set and
+# crashes in a loop ("no Qt platform plugin"), hundreds of core dumps per boot. It needs no GUI.
+mkdir -p "$HOME/.config/systemd/user/kde-baloo.service.d"
+printf '%s\n' '[Service]' 'Environment=QT_QPA_PLATFORM=offscreen' > "$HOME/.config/systemd/user/kde-baloo.service.d/offscreen.conf"
+systemctl --user daemon-reload
+
 # ── Plasma settings ────────────────────────────────────────────────────────────
 info "Plasma settings (Ghostty, keyboard, Num Lock, formats, effects)..."
 kwriteconfig6 --file kdeglobals --group General --key TerminalApplication ghostty
