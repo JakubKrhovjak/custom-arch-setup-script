@@ -36,6 +36,10 @@ cp "$REPO/dotfiles/klassy/klassyrc" "$HOME/.config/klassy/klassyrc"
 
 info "Applying Simpleton look-and-feel..."
 plasma-apply-lookandfeel -a org.simpleton.dark.desktop
+# Simpleton for both light and dark mode: the "Dark Mode" toggle in Brightness & Color would otherwise
+# switch the whole desktop to Breeze / Breeze Dark (icons included)
+kwriteconfig6 --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.simpleton.dark.desktop
+kwriteconfig6 --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.simpleton.dark.desktop
 WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
 plasma-apply-wallpaperimage "$WALLPAPER"
 # panel at the top edge (Plasma default is bottom)
@@ -55,8 +59,12 @@ kwriteconfig6 --file plasma-localerc --group Formats --key LC_TIME cs_CZ.UTF-8
 kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
 kwriteconfig6 --file kwinrc --group Plugins --key contrastEnabled false
 kwriteconfig6 --file kwinrc --group Plugins --key glideEnabled true
-# Toolbox JetBrains: okno jen v tray, ne v liste uloh (pravidlo KWin)
-kwriteconfig6 --file kwinrulesrc --group General --key rules toolbox-tray
+# Toolbox JetBrains: okno jen v tray, ne v liste uloh (pravidlo KWin).
+# Plasma 6.8 drzi seznam pravidel v klici "Order"; existujici polozky se nesmi prepsat.
+kwin_rules=$(kreadconfig6 --file kwinrulesrc --group General --key Order 2>/dev/null || true)
+if [[ ",$kwin_rules," != *",toolbox-tray,"* ]]; then
+    kwriteconfig6 --file kwinrulesrc --group General --key Order "${kwin_rules:+$kwin_rules,}toolbox-tray"
+fi
 kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key Description "Toolbox jen v tray"
 kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key wmclass jetbrains-toolbox
 kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key wmclassmatch 1
