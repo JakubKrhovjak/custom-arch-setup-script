@@ -55,6 +55,13 @@ kwriteconfig6 --file plasma-localerc --group Formats --key LC_TIME cs_CZ.UTF-8
 kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
 kwriteconfig6 --file kwinrc --group Plugins --key contrastEnabled false
 kwriteconfig6 --file kwinrc --group Plugins --key glideEnabled true
+# Toolbox JetBrains: okno jen v tray, ne v liste uloh (pravidlo KWin)
+kwriteconfig6 --file kwinrulesrc --group General --key rules toolbox-tray
+kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key Description "Toolbox jen v tray"
+kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key wmclass jetbrains-toolbox
+kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key wmclassmatch 1
+kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key skiptaskbar true
+kwriteconfig6 --file kwinrulesrc --group toolbox-tray --key skiptaskbarrule 2
 
 # ── Login screen (SDDM Breeze greeter in Simpleton colors + wallpaper) ────────
 info "Login screen..."
