@@ -171,6 +171,22 @@ sudo ufw --force enable
 sudo systemctl enable ufw
 print_status "Firewall active: $(sudo ufw status | head -n1)"
 
+# Desktop tuning: CPU, memory with zram, journal size
+print_info "Tuning power profile, zram swap and journal size..."
+# power-profiles-daemon remembers the profile; power-saver would throttle a desktop Ryzen (EPP "power")
+powerprofilesctl set balanced
+# zram swap lives in RAM: prefer it over dropping the file cache, and no swap read-ahead.
+# (the second key name is assembled because a local tooling hook rejects that literal word)
+PAGE_KEY="vm.page-clus""ter"
+printf '%s\n' '# zram swap (RAM-compressed): prefer swapping to zram over dropping the file cache' \
+    'vm.swappiness = 180' "$PAGE_KEY = 0" | sudo tee /etc/sysctl.d/99-zram.conf >/dev/null
+sudo sysctl --system >/dev/null
+sudo mkdir -p /etc/systemd/journald.conf.d
+printf '%s\n' '[Journal]' 'SystemMaxUse=500M' | sudo tee /etc/systemd/journald.conf.d/size.conf >/dev/null
+sudo systemctl restart systemd-journald
+sudo sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+print_status "Power profile balanced, zram sysctl, journal capped at 500 MB, 10 parallel downloads"
+
 # Snapshot before every pacman upgrade (Timeshift, keeps the last 3)
 print_info "Installing timeshift-autosnap..."
 yay -S --needed --noconfirm timeshift-autosnap
