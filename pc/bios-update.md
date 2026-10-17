@@ -16,7 +16,8 @@ Secure Boot keys and possibly the fTPM, so the disk asks for the LUKS passphrase
    A **wired keyboard** must be at hand: Bluetooth does not work at the passphrase prompt.
 4. **Timeshift snapshot**: `sudo timeshift --create --comments "before BIOS update"`.
 5. **Settings to restore** (they go back to defaults):
-   - SVM Mode = Enabled (KVM / the `win11-tia` VM), IOMMU = Enabled
+   - SVM Mode = Enabled (KVM / the `win11-tia` VM): Advanced Mode (F2) → Tweaker → Advanced CPU Settings
+     → SVM Mode (or search with F3). IOMMU stays as it was (off; only needed for PCI passthrough).
    - EXPO profile (RAM currently runs at 5000 MT/s, 2 × 16 GB)
    - fan curves, boot order (systemd-boot / UEFI disk first), CSM = Disabled
    - photograph the BIOS screens you changed before.
