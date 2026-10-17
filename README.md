@@ -36,7 +36,16 @@ Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD G
 **Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Docker + Compose + Buildx, Go, Terraform,
 kubectl, Helm, k9s, kind, trivy, k3s, SDKMAN (Java 21 + 25 Temurin, Maven, Gradle), NVM (Node.js LTS),
 Python, static analysis for the Claude `/cr` skill (semgrep, lizard, PMD), Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
-JetBrains Toolbox, VS Code, Claude Code.
+JetBrains Toolbox, VS Code, Claude Code, Joplin (Flatpak) + rclone.
+
+**rclone config in the repo, encrypted:** `secrets/rclone.conf.age` is `~/.config/rclone/rclone.conf` (Proton Drive,
+Google Drive remotes with their tokens) encrypted with [age](https://age-encryption.org) and a passphrase.
+`setup-script.sh` asks for the passphrase once and restores the file; after a token refresh or a new remote run
+`pc/rclone-conf.sh encrypt` and commit. The plain file is never committed.
+
+**Joplin notes without Joplin Cloud:** the profile (`~/.config/joplin-desktop`: notes, attachments, settings,
+plugins) is backed up daily to Proton Drive (`proton:backup/joplin`) by a user timer; `setup-script.sh` restores
+it before Joplin's first start (needs the rclone config above). Manual: `pc/joplin-proton.sh backup|restore|enable`.
 
 ## Layout
 

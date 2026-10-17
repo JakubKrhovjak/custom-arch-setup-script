@@ -14,6 +14,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 print_status() {
     echo -e "${GREEN}[✓]${NC} $1"
@@ -189,6 +190,22 @@ print_status "Google Chrome installed"
 print_info "Installing WhatsApp (ZapZap, Flatpak)..."
 sudo flatpak install -y --noninteractive flathub com.rtosta.zapzap
 print_status "WhatsApp (ZapZap) installed"
+
+# rclone + its config: secrets/rclone.conf.age holds ~/.config/rclone/rclone.conf (Proton Drive, Google Drive)
+# encrypted with age; the passphrase is asked for here, once. Re-encrypt with pc/rclone-conf.sh encrypt.
+print_info "Installing rclone, restoring rclone.conf from the repo (age passphrase)..."
+sudo pacman -S --needed --noconfirm rclone age sqlite
+bash "$REPO/pc/rclone-conf.sh" decrypt || print_error "rclone.conf not restored; later: bash $REPO/pc/rclone-conf.sh decrypt"
+
+# Joplin notes (Flatpak). The notes live on Proton Drive (proton:backup/joplin), not in Joplin Cloud:
+# the profile is restored before Joplin's first start and a daily backup timer is enabled.
+print_info "Installing Joplin (Flatpak), restoring notes from Proton Drive..."
+sudo flatpak install -y --noninteractive flathub net.cozic.joplin_desktop
+if [ ! -f "$HOME/.config/joplin-desktop/database.sqlite" ]; then
+    bash "$REPO/pc/joplin-proton.sh" restore || print_error "Joplin not restored; later: bash $REPO/pc/joplin-proton.sh restore"
+fi
+bash "$REPO/pc/joplin-proton.sh" enable
+print_status "Joplin installed, backup timer enabled"
 
 # Install Claude Code (native installer → ~/.local/bin/claude, updates itself)
 print_info "Installing Claude Code..."
