@@ -166,6 +166,7 @@ sudo ufw allow from 10.42.0.0/16 comment 'k3s pods'
 sudo ufw allow from 10.43.0.0/16 comment 'k3s services'
 sudo ufw allow from 172.16.0.0/12 comment 'docker networks'
 sudo ufw allow in on virbr0 comment 'libvirt NAT (DHCP, DNS)'
+sudo ufw allow in on br-plc comment 'PLC lab network (VM, PLC)'   # bridge to the PLC; the rule is inert without it
 sudo ufw --force enable
 sudo systemctl enable ufw
 print_status "Firewall active: $(sudo ufw status | head -n1)"

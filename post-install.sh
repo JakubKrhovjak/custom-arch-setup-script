@@ -53,6 +53,8 @@ ok "Simpleton applied, panel at the top"
 mkdir -p "$HOME/.config/systemd/user/kde-baloo.service.d"
 printf '%s\n' '[Service]' 'Environment=QT_QPA_PLATFORM=offscreen' > "$HOME/.config/systemd/user/kde-baloo.service.d/offscreen.conf"
 systemctl --user daemon-reload
+# index file names only, not file contents: far fewer disk writes and less CPU; name search keeps working
+kwriteconfig6 --file baloofilerc --group General --key "only basic indexing" true
 
 # ── Plasma settings ────────────────────────────────────────────────────────────
 info "Plasma settings (Ghostty, keyboard, Num Lock, formats, effects)..."

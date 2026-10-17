@@ -250,7 +250,8 @@ echo "tmpfs /tmp tmpfs noatime,mode=1777 0 0" >> /mnt/etc/fstab
 info "Configuring initramfs and unified kernel images..."
 # systemd-based initramfs: sd-encrypt reads /etc/crypttab.initramfs (TPM2 unlock is added by secureboot-tpm2.sh)
 sed -i 's/^HOOKS=.*/HOOKS=(base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems)/' /mnt/etc/mkinitcpio.conf
-echo "root UUID=${LUKS_UUID} none luks" > /mnt/etc/crypttab.initramfs
+# discard: let fstrim reach the SSD through LUKS (otherwise TRIM stops at the encryption layer)
+echo "root UUID=${LUKS_UUID} none luks,discard" > /mnt/etc/crypttab.initramfs
 mkdir -p /mnt/etc/kernel
 echo "root=/dev/mapper/root rootflags=subvol=@ rw quiet splash udev.log_priority=3" > /mnt/etc/kernel/cmdline
 
