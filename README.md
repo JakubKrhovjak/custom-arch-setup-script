@@ -17,7 +17,7 @@ Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in th
    keys deleted (**setup mode**). Boot the Arch ISO (UEFI), connect to the internet (`iwctl` for Wi-Fi).
 2. Get the scripts and install:
    ```bash
-   pacman -Sy git && git clone https://github.com/JakubKrhovjak/manjaro-setup-script && cd manjaro-setup-script && bash arch-install.sh
+   pacman -Sy git && git clone https://github.com/JakubKrhovjak/custom-arch-setup-script && cd custom-arch-setup-script && bash arch-install.sh
    ```
    Asks for the disk, hostname, user, password and disk passphrase. Root stays locked (use `sudo`).
 3. `umount -R /mnt && cryptsetup close root && reboot`. With Secure Boot: BIOS → Secure Boot → **Enabled**
