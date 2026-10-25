@@ -20,7 +20,7 @@ BACKUP=/mnt/data/backup/arch-to-uki
 LUKS_UUID=55b62d42-4184-41bc-9f97-7765ed5e7619
 LUKS_NAME=luks-$LUKS_UUID
 ESP=/boot/efi
-CMDLINE="root=/dev/mapper/$LUKS_NAME rootflags=subvol=@ rw quiet splash udev.log_priority=3"
+CMDLINE="root=/dev/mapper/$LUKS_NAME rootflags=subvol=@ rw quiet splash udev.log_priority=3 zswap.enabled=0"
 HOOKS="base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems"
 
 phase() { # číslo, název

@@ -253,7 +253,7 @@ sed -i 's/^HOOKS=.*/HOOKS=(base systemd plymouth autodetect microcode modconf km
 # discard: let fstrim reach the SSD through LUKS (otherwise TRIM stops at the encryption layer)
 echo "root UUID=${LUKS_UUID} none luks,discard" > /mnt/etc/crypttab.initramfs
 mkdir -p /mnt/etc/kernel
-echo "root=/dev/mapper/root rootflags=subvol=@ rw quiet splash udev.log_priority=3" > /mnt/etc/kernel/cmdline
+echo "root=/dev/mapper/root rootflags=subvol=@ rw quiet splash udev.log_priority=3 zswap.enabled=0" > /mnt/etc/kernel/cmdline
 
 for KERNEL in linux linux-lts; do
     cat > "/mnt/etc/mkinitcpio.d/${KERNEL}.preset" <<EOF
@@ -396,6 +396,9 @@ sed -i -E '/^OPTIONS=/s/([( ])debug/\\1!debug/' /etc/makepkg.conf
 
 # zram swap (8 GB, zstd) — earlyoom kills the biggest process before the system freezes
 printf '[zram0]\nzram-size = 8192\ncompression-algorithm = zstd\nswap-priority = 100\n' > /etc/systemd/zram-generator.conf
+# zswap is off on the cmdline: a second compressed cache in front of zram makes kswapd allocate while reclaiming,
+# which froze the PC under memory pressure; keep 256 MB free, start reclaim earlier, SysRq for a clean reboot
+printf '%s\n' 'vm.min_free_kbytes = 262144' 'vm.watermark_scale_factor = 100' 'kernel.sysrq = 1' > /etc/sysctl.d/99-memory-headroom.conf
 
 # Boot splash: firmware logo
 plymouth-set-default-theme bgrt
