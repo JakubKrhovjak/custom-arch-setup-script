@@ -214,6 +214,12 @@ print_info "Installing Teams for Linux and Flatseal (Flatpak)..."
 sudo flatpak install -y --noninteractive flathub com.github.IsmaelMartinez.teams_for_linux com.github.tchx84.Flatseal
 print_status "Teams and Flatseal installed"
 
+# Proton VPN (official GTK app from extra) with Simpleton tray icons, kept across upgrades by a pacman hook
+print_info "Installing Proton VPN..."
+sudo pacman -S --needed --noconfirm proton-vpn-gtk-app
+bash "$REPO/pc/protonvpn-tray.sh"
+print_status "Proton VPN installed, tray icons in Simpleton style"
+
 # Arch Assistant: tray app (updates, system health, cleanup); its installer is idempotent.
 # --no-octopi: this machine never had Octopi.
 print_info "Installing Arch Assistant..."
