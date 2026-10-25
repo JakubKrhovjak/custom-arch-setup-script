@@ -188,9 +188,14 @@ printf '%s\n' '# zram swap (RAM-compressed): prefer swapping to zram over droppi
 printf '%s\n' 'vm.min_free_kbytes = 262144' 'vm.watermark_scale_factor = 100' 'kernel.sysrq = 1' \
     | sudo tee /etc/sysctl.d/99-memory-headroom.conf >/dev/null
 sudo sysctl --system >/dev/null
-# zswap off: a second compressed cache in front of zram makes kswapd allocate while reclaiming (froze the PC)
-echo 0 | sudo tee /sys/module/zswap/parameters/enabled >/dev/null
-grep -q 'zswap.enabled=0' /etc/kernel/cmdline || { sudo sed -i 's/$/ zswap.enabled=0/' /etc/kernel/cmdline && sudo mkinitcpio -P; }
+# zswap off: a second compressed cache in front of zram is the suspected cause of hard freezes under memory pressure
+# (kswapd allocating while reclaiming); skipped on kernels without zswap and on installs without a UKI cmdline
+if [ -e /sys/module/zswap/parameters/enabled ]; then
+    echo 0 | sudo tee /sys/module/zswap/parameters/enabled >/dev/null || true
+fi
+if [ -f /etc/kernel/cmdline ] && ! grep -q 'zswap.enabled=0' /etc/kernel/cmdline; then
+    sudo sed -i 's/$/ zswap.enabled=0/' /etc/kernel/cmdline && sudo mkinitcpio -P
+fi
 sudo mkdir -p /etc/systemd/journald.conf.d
 printf '%s\n' '[Journal]' 'SystemMaxUse=500M' | sudo tee /etc/systemd/journald.conf.d/size.conf >/dev/null
 sudo systemctl restart systemd-journald

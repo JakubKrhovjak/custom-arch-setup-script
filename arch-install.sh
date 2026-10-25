@@ -396,8 +396,8 @@ sed -i -E '/^OPTIONS=/s/([( ])debug/\\1!debug/' /etc/makepkg.conf
 
 # zram swap (8 GB, zstd) — earlyoom kills the biggest process before the system freezes
 printf '[zram0]\nzram-size = 8192\ncompression-algorithm = zstd\nswap-priority = 100\n' > /etc/systemd/zram-generator.conf
-# zswap is off on the cmdline: a second compressed cache in front of zram makes kswapd allocate while reclaiming,
-# which froze the PC under memory pressure; keep 256 MB free, start reclaim earlier, SysRq for a clean reboot
+# zswap is off on the cmdline: a second compressed cache in front of zram is the suspected cause
+# of hard freezes under memory pressure (kswapd allocating while reclaiming); keep 256 MB free, start reclaim earlier, SysRq for a clean reboot
 printf '%s\n' 'vm.min_free_kbytes = 262144' 'vm.watermark_scale_factor = 100' 'kernel.sysrq = 1' > /etc/sysctl.d/99-memory-headroom.conf
 
 # Boot splash: firmware logo
