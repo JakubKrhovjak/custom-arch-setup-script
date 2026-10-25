@@ -381,7 +381,7 @@ EOF
 mkdir -p /etc/systemd/system/paccache.service.d
 printf '[Service]\\nExecStart=\\nExecStart=/usr/bin/paccache -rk3\\nExecStart=/usr/bin/paccache -ruk0\\n' > /etc/systemd/system/paccache.service.d/uninstalled.conf
 
-# Firewall: incoming denied (except replies), outgoing allowed; rules for docker / k3s / libvirt in setup-script.sh
+# Firewall: incoming denied (except replies), outgoing allowed; rules for containers / k3s / libvirt in setup-script.sh
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
 
 # fwupd with Secure Boot: boot the fwupd EFI binary signed by sbctl directly, without shim

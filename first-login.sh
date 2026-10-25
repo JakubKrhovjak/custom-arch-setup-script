@@ -21,7 +21,7 @@ echo "First login setup — log: $LOG"
 echo "sudo asks for your password once; it stays valid until the setup ends."
 sudo -v || finish "sudo failed, setup will run again at next login."
 
-# keep sudo alive (yay, pacman, docker…) until this script ends
+# keep sudo alive (yay, pacman, podman…) until this script ends
 while kill -0 $$ 2>/dev/null; do sudo -n true; sleep 50; done 2>/dev/null &
 
 sleep 5 # let Plasma finish starting (post-install changes the running session)
@@ -35,4 +35,4 @@ for STEP in post-install.sh setup-script.sh; do
 done
 
 rm -f "$AUTOSTART"
-finish "All done. Log out and back in (theme on the login screen, docker + libvirt groups)."
+finish "All done. Log out and back in (theme on the login screen, libvirt group)."

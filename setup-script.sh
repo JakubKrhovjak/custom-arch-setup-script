@@ -47,12 +47,16 @@ if ! command -v yay &> /dev/null; then
     print_status "yay installed"
 fi
 
-# Install Docker
-print_info "Installing Docker..."
-sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx
-sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"
-print_status "Docker installed: $(docker --version)"
+# Install Podman (rootless; docker-compose stays as the compose provider for `podman compose`)
+print_info "Installing Podman..."
+sudo pacman -S --needed --noconfirm podman netavark aardvark-dns passt docker-compose
+grep -q "^$USER:" /etc/subuid || sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$USER"
+# Docker-compatible API socket + containers with a restart policy start at boot (linger)
+systemctl --user enable --now podman.socket podman-restart.service
+sudo loginctl enable-linger "$USER"
+# Testcontainers -> rootless Podman socket
+[ -f "$HOME/.testcontainers.properties" ] || printf 'docker.client.strategy=org.testcontainers.dockerclient.EnvironmentAndSystemPropertyClientProviderStrategy\ndocker.host=unix:///run/user/%s/podman/podman.sock\nryuk.container.privileged=true\n' "$(id -u)" > "$HOME/.testcontainers.properties"
+print_status "Podman installed: $(podman --version)"
 
 # Install Go
 print_info "Installing Go..."
@@ -164,7 +168,7 @@ sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow from 10.42.0.0/16 comment 'k3s pods'
 sudo ufw allow from 10.43.0.0/16 comment 'k3s services'
-sudo ufw allow from 172.16.0.0/12 comment 'docker networks'
+sudo ufw allow from 172.16.0.0/12 comment 'container networks'
 sudo ufw allow in on virbr0 comment 'libvirt NAT (DHCP, DNS)'
 sudo ufw allow in on br-plc comment 'PLC lab network (VM, PLC)'   # bridge to the PLC; the rule is inert without it
 sudo ufw --force enable
@@ -260,7 +264,7 @@ echo "=================================="
 print_status "Installation Complete!"
 echo "=================================="
 echo ""
-print_info "Log out and back in (docker + libvirt groups), then:"
+print_info "Log out and back in (libvirt group), then:"
 echo "  gcloud init      # Google Cloud login"
 echo "  gh auth login    # GitHub login"
 echo "  claude           # Claude Code login"
