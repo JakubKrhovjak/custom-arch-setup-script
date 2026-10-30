@@ -3,7 +3,7 @@
 #   - weather widget (advanced-weather-widget, pinned tag) right of the clock, location Rožnov pod Radhoštěm
 #   - no "Show Desktop" button
 #   - tray: Bluetooth, Volume and Clipboard in the hidden (expand arrow) section, Brightness & Color visible
-#   - task manager launcher for WhatsApp = ZapZap (Flatpak) instead of WasIstLos
+#   - task manager launcher for messengers = Ferdium instead of WasIstLos / ZapZap
 # Needs a running plasmashell (post-install.sh runs it from the first-login session).
 set -euo pipefail
 
@@ -23,7 +23,12 @@ if [[ ! -d "$HOME/.local/share/plasma/plasmoids/$WEATHER_ID" ]]; then
 fi
 
 # ── panel layout (Plasma scripting) ──────────────────────────────────────────
-info "Panel: weather, no Show Desktop, tray hidden items, ZapZap launcher..."
+info "Panel: weather, no Show Desktop, tray hidden items, Ferdium launcher..."
+# swap the messenger launchers for Ferdium only when Ferdium is installed (a missing .desktop = dead launcher)
+FERDIUM=false
+for d in /usr/share/applications "$HOME/.local/share/applications" /var/lib/flatpak/exports/share/applications; do
+    if [[ -f "$d/ferdium.desktop" ]]; then FERDIUM=true; fi
+done
 # the widget delete method is called by a computed name (a local tooling hook rejects the literal call)
 qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
 var del = 're' + 'move';
@@ -44,8 +49,9 @@ panels().forEach(function (p) {
         }
         if (w.type.indexOf('tasks') >= 0) {
             w.currentConfigGroup = ['General'];
+            var old = ['applications:com.github.xeco23.WasIstLos.desktop', 'applications:com.rtosta.zapzap.desktop'];
             var l = String(w.readConfig('launchers', '')).split(',').map(function (x) {
-                return x == 'applications:com.github.xeco23.WasIstLos.desktop' ? 'applications:com.rtosta.zapzap.desktop' : x;
+                return $FERDIUM && old.indexOf(x) >= 0 ? 'applications:ferdium.desktop' : x;
             });
             w.writeConfig('launchers', l);
             w.reloadConfig();

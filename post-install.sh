@@ -44,7 +44,7 @@ WALLPAPER=$(ls "$SHARE"/wallpapers/Simpleton/contents/images/* | head -n1)
 plasma-apply-wallpaperimage "$WALLPAPER"
 # panel at the top edge (Plasma default is bottom)
 qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript 'panels().forEach(function (p) { p.location = "top"; })'
-# weather widget, no Show Desktop, Bluetooth/Volume/Clipboard in the tray's hidden section, ZapZap launcher
+# weather widget, no Show Desktop, Bluetooth/Volume/Clipboard in the tray's hidden section, Ferdium launcher
 bash "$REPO/pc/panel-setup.sh" || info "panel layout not applied; later: bash $REPO/pc/panel-setup.sh"
 ok "Simpleton applied, panel at the top"
 
@@ -117,9 +117,13 @@ ok "Dotfiles installed"
 xdg-user-dirs-update
 
 # ── Timeshift: creates the cron jobs (daily, at boot) from timeshift.json + the first snapshot ──
-info "Timeshift schedule + first snapshot..."
-sudo timeshift --check --scripted
-ls /etc/cron.d/ | grep timeshift
+if command -v timeshift >/dev/null; then
+    info "Timeshift schedule + first snapshot..."
+    sudo timeshift --check --scripted
+    ls /etc/cron.d/ | grep timeshift
+else
+    info "Timeshift not installed, schedule skipped"
+fi
 
 echo ""
 ok "Done. Log out and back in to see everything (login screen included)."

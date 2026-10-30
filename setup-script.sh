@@ -218,11 +218,18 @@ print_info "Installing Google Chrome (Flatpak)..."
 sudo flatpak install -y --noninteractive flathub com.google.Chrome
 print_status "Google Chrome installed"
 
-# Install WhatsApp client ZapZap (Flatpak, Qt WebEngine; WasIstLos from AUR needs webkit2gtk, which no longer builds)
-print_info "Installing WhatsApp (ZapZap, Flatpak)..."
-sudo flatpak install -y --noninteractive flathub com.rtosta.zapzap
-bash "$REPO/pc/zapzap-tray.sh"
-print_status "WhatsApp (ZapZap) installed, tray icon in Simpleton style"
+# Install Ferdium (AUR, Electron): WhatsApp, Messenger and other messengers as services in one app (replaces ZapZap).
+# Starts at login hidden in the tray; Ferdium merges this partial settings.json with its defaults on first start.
+print_info "Installing Ferdium..."
+yay -S --needed --noconfirm ferdium-bin
+FERDIUM_SETTINGS="$HOME/.config/Ferdium/config/settings.json"
+mkdir -p "$(dirname "$FERDIUM_SETTINGS")" "$HOME/.config/autostart"
+[ -f "$FERDIUM_SETTINGS" ] || echo '{}' > "$FERDIUM_SETTINGS"
+jq '.autoLaunchOnStart = true | .autoLaunchInBackground = true | .startMinimized = true
+    | .enableSystemTray = true | .minimizeToSystemTray = true | .closeToSystemTray = true' \
+    "$FERDIUM_SETTINGS" > "$FERDIUM_SETTINGS.tmp" && mv "$FERDIUM_SETTINGS.tmp" "$FERDIUM_SETTINGS"
+cp /usr/share/applications/ferdium.desktop "$HOME/.config/autostart/ferdium.desktop"
+print_status "Ferdium installed, starts at login in the tray"
 
 # Teams (Flatpak; replaces teams-for-linux from AUR) and Flatseal (Flatpak permission manager)
 print_info "Installing Teams for Linux and Flatseal (Flatpak)..."
