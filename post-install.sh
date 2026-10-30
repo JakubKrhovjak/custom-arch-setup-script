@@ -99,7 +99,7 @@ sudo chown -R sddm:sddm "$SDDM_CFG" # no glob: /var/lib/sddm is not readable for
 ok "Login screen uses Simpleton"
 
 # ── Dotfiles (existing files are kept as *.bak) ───────────────────────────────
-info "Dotfiles (zsh, Starship, Ghostty)..."
+info "Dotfiles (zsh, Starship, Ghostty, Dolphin)..."
 install_dotfile() { # source in repo, target
     mkdir -p "$(dirname "$2")"
     if [ -f "$2" ] && ! cmp -s "$1" "$2"; then
@@ -111,6 +111,7 @@ install_dotfile "$REPO/dotfiles/zshrc" "$HOME/.zshrc"
 install_dotfile "$REPO/dotfiles/zsh/base.zsh" "$HOME/.config/zsh/base.zsh"
 install_dotfile "$REPO/dotfiles/starship.toml" "$HOME/.config/starship.toml"
 install_dotfile "$REPO/dotfiles/ghostty/config" "$HOME/.config/ghostty/config"
+install_dotfile "$REPO/dotfiles/dolphin/dolphinrc" "$HOME/.config/dolphinrc"
 [ "$(getent passwd "$USER" | cut -d: -f7)" = /usr/bin/zsh ] || chsh -s /usr/bin/zsh
 ok "Dotfiles installed"
 

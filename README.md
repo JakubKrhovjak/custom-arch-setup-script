@@ -50,7 +50,7 @@ it before Joplin's first start (needs the rclone config above). Manual: `pc/jopl
 ## Layout
 
 ```
-dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config, klassy/klassyrc (14 px corners)
+dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config, klassy/klassyrc (14 px corners), dolphin/dolphinrc
 theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,
             wallpapers/Simpleton, color-schemes/BreathSlate.colors
 ```
