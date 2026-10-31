@@ -137,7 +137,17 @@ pacstrap -K /mnt \
     base-devel \
     linux \
     linux-lts \
-    linux-firmware \
+    linux-firmware-amd \
+    linux-firmware-amdgpu \
+    linux-firmware-radeon \
+    linux-firmware-intel \
+    linux-firmware-mediatek \
+    linux-firmware-realtek \
+    linux-firmware-atheros \
+    linux-firmware-broadcom \
+    linux-firmware-cirrus \
+    linux-firmware-ti \
+    linux-firmware-other \
     amd-ucode \
     btrfs-progs \
     cryptsetup \
