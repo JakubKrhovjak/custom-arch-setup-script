@@ -208,6 +208,30 @@ yay -S --needed --noconfirm timeshift-autosnap
 sudo sed -i -E 's/^maxSnapshots=.*/maxSnapshots=3/; s/^updateGrub=.*/updateGrub=false/' /etc/timeshift-autosnap.conf # no GRUB (systemd-boot)
 print_status "timeshift-autosnap installed (max 3 snapshots)"
 
+# Disk health: btrfs checksums are only verified when data is read, so scrub every btrfs filesystem monthly;
+# smartd watches the SSDs (short self-test weekly, long monthly) and turns a warning into a desktop notification
+print_info "Enabling btrfs scrub and smartd..."
+sudo pacman -S --needed --noconfirm smartmontools libnotify
+findmnt -t btrfs -no UUID,TARGET | sort -u -k1,1 | while read -r _ target; do
+    sudo systemctl enable "btrfs-scrub@$(systemd-escape -p "$target").timer"
+done
+printf '%s\n' '#!/bin/sh' '# smartd warning -> desktop notification for every logged-in user' 'for bus in /run/user/*/bus; do' \
+    '  [ -S "$bus" ] || continue' \
+    '  runuser -u "$(stat -c %U "$bus")" -- env DBUS_SESSION_BUS_ADDRESS="unix:path=$bus" notify-send -u critical -a smartd "SMART: ${SMARTD_DEVICE:-disk}" "${SMARTD_MESSAGE:-smartd warning}" || true' \
+    'done' | sudo tee /usr/local/bin/smartd-notify >/dev/null
+sudo chmod 755 /usr/local/bin/smartd-notify
+echo 'DEVICESCAN -a -n standby,q -s (S/../../7/02|L/../01/./03) -m root -M exec /usr/local/bin/smartd-notify' \
+    | sudo tee /etc/smartd.conf >/dev/null
+sudo systemctl enable --now smartd
+print_status "btrfs scrub monthly, smartd active"
+
+# Arch news before upgrades: informant's pacman hook stops -Syu while there is unread news (manual interventions
+# are announced there; read with `informant read`); arch-audit lists installed packages with known CVEs
+print_info "Installing informant and arch-audit..."
+sudo pacman -S --needed --noconfirm informant arch-audit
+sudo informant read --all >/dev/null   # old news is not relevant to a fresh install
+print_status "informant (unread news blocks pacman) and arch-audit installed"
+
 # Install editors (via AUR)
 print_info "Installing JetBrains Toolbox and VS Code..."
 yay -S --needed --noconfirm jetbrains-toolbox visual-studio-code-bin

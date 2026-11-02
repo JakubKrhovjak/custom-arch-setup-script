@@ -38,6 +38,10 @@ kubectl, Helm, k9s, kind, trivy, k3s, SDKMAN (Java 21 + 25 Temurin, Maven, Gradl
 Python, static analysis for the Claude `/cr` skill (semgrep, lizard, PMD), Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
 JetBrains Toolbox, VS Code, Claude Code, Joplin (Flatpak) + rclone.
 
+**System health (`setup-script.sh`):** ufw, monthly `btrfs scrub` on every btrfs filesystem, `smartd` (SSD self-tests,
+warnings as desktop notifications via `/usr/local/bin/smartd-notify`), `informant` (unread Arch news blocks `pacman -Syu`;
+read it with `informant read`), `arch-audit` (installed packages with known CVEs).
+
 **rclone config in the repo, encrypted:** `secrets/rclone.conf.age` is `~/.config/rclone/rclone.conf` (Proton Drive,
 Google Drive remotes with their tokens) encrypted with [age](https://age-encryption.org) and a passphrase.
 `setup-script.sh` asks for the passphrase once and restores the file; after a token refresh or a new remote run
