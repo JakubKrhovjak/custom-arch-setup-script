@@ -177,8 +177,8 @@ print_status "Firewall active: $(sudo ufw status | head -n1)"
 
 # Desktop tuning: CPU, memory with zram, journal size
 print_info "Tuning power profile, zram swap and journal size..."
-# power-profiles-daemon remembers the profile; power-saver would throttle a desktop Ryzen (EPP "power")
-powerprofilesctl set balanced
+# power-profiles-daemon remembers the profile; power-saver would throttle a desktop Ryzen (EPP "power"), performance = fastest response
+powerprofilesctl set performance
 # zram swap lives in RAM: prefer it over dropping the file cache, and no swap read-ahead.
 # (the second key name is assembled because a local tooling hook rejects that literal word)
 PAGE_KEY="vm.page-clus""ter"
@@ -188,6 +188,10 @@ printf '%s\n' '# zram swap (RAM-compressed): prefer swapping to zram over droppi
 printf '%s\n' 'vm.min_free_kbytes = 262144' 'vm.watermark_scale_factor = 100' 'kernel.sysrq = 1' \
     | sudo tee /etc/sysctl.d/99-memory-headroom.conf >/dev/null
 sudo sysctl --system >/dev/null
+# MGLRU thrashing guard: never evict pages used in the last second; when that is impossible the OOM killer ends
+# one process instead of the whole desktop stalling on reclaim (sysfs, not sysctl → set at boot by tmpfiles)
+echo 'w /sys/kernel/mm/lru_gen/min_ttl_ms - - - - 1000' | sudo tee /etc/tmpfiles.d/mglru-min-ttl.conf >/dev/null
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/mglru-min-ttl.conf
 # zswap off: a second compressed cache in front of zram is the suspected cause of hard freezes under memory pressure
 # (kswapd allocating while reclaiming); skipped on kernels without zswap and on installs without a UKI cmdline
 if [ -e /sys/module/zswap/parameters/enabled ]; then
@@ -200,7 +204,7 @@ sudo mkdir -p /etc/systemd/journald.conf.d
 printf '%s\n' '[Journal]' 'SystemMaxUse=500M' | sudo tee /etc/systemd/journald.conf.d/size.conf >/dev/null
 sudo systemctl restart systemd-journald
 sudo sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
-print_status "Power profile balanced, zram sysctl, zswap off, memory headroom, journal capped at 500 MB, 10 parallel downloads"
+print_status "Power profile performance, zram sysctl, zswap off, memory headroom, MGLRU thrashing guard, journal capped at 500 MB, 10 parallel downloads"
 
 # CPU scheduler for the desktop: scx_bpfland (eBPF via sched_ext) keeps interactive tasks smooth under full CPU load
 # (60 fps test under 48 busy tasks: worst frame 7.8 ms vs 17.9 ms with the default EEVDF); the kernel falls back to
