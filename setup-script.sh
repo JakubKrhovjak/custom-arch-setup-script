@@ -202,6 +202,17 @@ sudo systemctl restart systemd-journald
 sudo sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
 print_status "Power profile balanced, zram sysctl, zswap off, memory headroom, journal capped at 500 MB, 10 parallel downloads"
 
+# CPU scheduler for the desktop: scx_bpfland (eBPF via sched_ext) keeps interactive tasks smooth under full CPU load
+# (60 fps test under 48 busy tasks: worst frame 7.8 ms vs 17.9 ms with the default EEVDF); the kernel falls back to
+# EEVDF on its own if it exits. Back to EEVDF: `scxctl stop` (until reboot) or `sudo systemctl disable --now scx_loader`
+if [ -d /sys/kernel/sched_ext ]; then
+    print_info "Enabling sched_ext scheduler scx_bpfland..."
+    sudo pacman -S --needed --noconfirm scx-scheds scx-tools
+    printf '%s\n' 'default_sched = "scx_bpfland"' 'default_mode = "Auto"' | sudo tee /etc/scx_loader.toml >/dev/null
+    sudo systemctl enable --now scx_loader.service
+    print_status "scx_bpfland active (scxctl get)"
+fi
+
 # Snapshot before every pacman upgrade (Timeshift, keeps the last 3)
 print_info "Installing timeshift-autosnap..."
 yay -S --needed --noconfirm timeshift-autosnap

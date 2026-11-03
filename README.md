@@ -42,6 +42,10 @@ JetBrains Toolbox, VS Code, Claude Code, Joplin (Flatpak) + rclone.
 warnings as desktop notifications via `/usr/local/bin/smartd-notify`), `informant` (unread Arch news blocks `pacman -Syu`;
 read it with `informant read`), `arch-audit` (installed packages with known CVEs).
 
+**CPU scheduler (`setup-script.sh`):** `scx_bpfland` loaded through sched_ext by the `scx_loader` service
+(`/etc/scx_loader.toml`) — interactive apps stay smooth while all cores are busy. Check with `scxctl get`;
+back to the kernel's EEVDF with `scxctl stop` (until reboot) or `sudo systemctl disable --now scx_loader`.
+
 **rclone config in the repo, encrypted:** `secrets/rclone.conf.age` is `~/.config/rclone/rclone.conf` (Proton Drive,
 Google Drive remotes with their tokens) encrypted with [age](https://age-encryption.org) and a passphrase.
 `setup-script.sh` asks for the passphrase once and restores the file; after a token refresh or a new remote run
