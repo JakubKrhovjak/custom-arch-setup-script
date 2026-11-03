@@ -5,7 +5,7 @@ Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in th
 
 | Script | Run | What it does |
 |---|---|---|
-| `arch-install.sh` | Arch ISO, as root | LUKS2 (Argon2id) + btrfs (`@ @home @cache @log`), systemd-boot + UKI (`linux`, `linux-lts`), minimal Plasma, zram + earlyoom, Timeshift, yay; Secure Boot + TPM2 when the firmware is in setup mode |
+| `arch-install.sh` | Arch ISO, as root | LUKS2 (Argon2id) + btrfs (`@ @home @cache @log`), systemd-boot + UKI (`linux-zen` default, `linux-lts` fallback), minimal Plasma, zram + earlyoom, Timeshift, yay; Secure Boot + TPM2 when the firmware is in setup mode |
 | `first-login.sh` | automatically at first login | opens Ghostty and runs the two scripts below with progress on screen (log `~/arch-setup/first-login.log`); on failure runs again at next login |
 | `post-install.sh` | (first login) | Simpleton theme (desktop + login screen), Ghostty as default terminal, dotfiles, `us,cz` keyboard |
 | `setup-script.sh` | (first login) | dev tools (below) |

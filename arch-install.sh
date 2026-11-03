@@ -81,7 +81,7 @@ fi
 
 TIMEZONE="Europe/Prague"
 KEYMAP="us"
-ESP_SIZE="1GiB" # UKI ~75 MB each (linux + linux-lts)
+ESP_SIZE="1GiB" # UKI ~75 MB each (linux-zen + linux-lts)
 
 warn "This will ERASE all data on $DISK. Type 'yes' to continue:"
 read -r CONFIRM
@@ -135,7 +135,7 @@ info "Installing base system (this may take a while)..."
 pacstrap -K /mnt \
     base \
     base-devel \
-    linux \
+    linux-zen \
     linux-lts \
     linux-firmware-amd \
     linux-firmware-amdgpu \
@@ -265,7 +265,7 @@ echo "root UUID=${LUKS_UUID} none luks,discard" > /mnt/etc/crypttab.initramfs
 mkdir -p /mnt/etc/kernel
 echo "root=/dev/mapper/root rootflags=subvol=@ rw quiet splash udev.log_priority=3 zswap.enabled=0" > /mnt/etc/kernel/cmdline
 
-for KERNEL in linux linux-lts; do
+for KERNEL in linux-zen linux-lts; do
     cat > "/mnt/etc/mkinitcpio.d/${KERNEL}.preset" <<EOF
 # mkinitcpio preset for '${KERNEL}': UKI for systemd-boot
 ALL_kver="/boot/vmlinuz-${KERNEL}"
@@ -429,7 +429,7 @@ printf '[Theme]\nCurrent=breeze\nCursorTheme=breeze_cursors\n' > /etc/sddm.conf.
 # UKIs + systemd-boot (finds UKIs in EFI/Linux on its own)
 mkinitcpio -P
 bootctl install --esp-path=/boot/efi
-printf 'default arch-linux.efi\ntimeout 3\nconsole-mode max\neditor no\n' > /boot/efi/loader/loader.conf
+printf 'default arch-linux-zen.efi\ntimeout 3\nconsole-mode max\neditor no\n' > /boot/efi/loader/loader.conf
 # initramfs images from the default presets (pacstrap) — not used with UKIs
 rm -f /boot/initramfs-*.img
 
@@ -537,7 +537,7 @@ ok "Installation complete!"
 echo -e "${GREEN}══════════════════════════════════════${NC}"
 echo ""
 echo "  Disk:     $DISK (ESP $EFI_PART, LUKS2 $ROOT_PART → btrfs @ @home @cache @log)"
-echo "  Boot:     systemd-boot + UKI (linux, linux-lts)"
+echo "  Boot:     systemd-boot + UKI (linux-zen default, linux-lts fallback)"
 echo "  Hostname: $HOSTNAME"
 echo "  User:     $USERNAME (root locked, use sudo)"
 echo ""
