@@ -203,6 +203,8 @@ pacstrap -K /mnt \
     powerdevil \
     power-profiles-daemon \
     kscreen \
+    bolt \
+    plasma-thunderbolt \
     kwallet-pam \
     ksshaskpass \
     kde-gtk-config \

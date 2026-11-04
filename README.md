@@ -39,7 +39,8 @@ Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first b
 ## What gets installed
 
 **Desktop (minimal):** Plasma without `kde-applications-meta` — Dolphin, Kate, Okular, Gwenview, Spectacle,
-Ark, Filelight, KCalc, Ghostty (no Konsole), Firefox, VLC, Flatpak (Flathub), printing (CUPS).
+Ark, Filelight, KCalc, Ghostty (no Konsole), Firefox, VLC, Flatpak (Flathub), printing (CUPS),
+Thunderbolt/USB4 dock authorization (`bolt` + `plasma-thunderbolt`: System Settings → Thunderbolt).
 Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD GPU (Mesa, Vulkan).
 
 **Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Podman (rootless) + Compose, Go, Terraform,
