@@ -281,6 +281,18 @@ sudo pacman -S --needed --noconfirm proton-vpn-gtk-app
 bash "$REPO/pc/protonvpn-tray.sh"
 print_status "Proton VPN installed, tray icons in Simpleton style"
 
+# Proton Pass: desktop app + CLI. Both from AUR; proton-pass-cli builds from source.
+# The CLI feeds the shell secrets: vault env-secrets → secrets-sync → KWallet → ~/.config/zsh/secrets.zsh.
+# Login is a browser flow (the URL is printed, not opened), so it is left for after the setup.
+print_info "Installing Proton Pass (app + CLI)..."
+yay -S --needed --noconfirm proton-pass-bin proton-pass-cli
+if pass-cli info >/dev/null 2>&1 && command -v secrets-sync >/dev/null; then
+    secrets-sync || print_error "secrets-sync failed; later: secrets-sync"
+    print_status "Proton Pass installed, shell secrets synced to KWallet"
+else
+    print_status "Proton Pass installed. Shell secrets: run pass-cli login once; secrets-sync.timer syncs within 15 min (or run secrets-sync)"
+fi
+
 # Arch Assistant: tray app (updates, system health, cleanup); its installer is idempotent.
 # --no-octopi: this machine never had Octopi.
 print_info "Installing Arch Assistant..."

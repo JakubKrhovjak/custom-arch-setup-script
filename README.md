@@ -58,12 +58,20 @@ it before Joplin's first start (needs the rclone config above). Manual: `pc/jopl
 ## Layout
 
 ```
-dotfiles/   zshrc, zsh/base.zsh, starship.toml, ghostty/config, klassy/klassyrc (14 px corners), dolphin/dolphinrc
+dotfiles/   zshrc, zsh/base.zsh, zsh/secrets.zsh, bin/secrets-sync, systemd/secrets-sync.{service,timer},
+            starship.toml, ghostty/config,
+            klassy/klassyrc (14 px corners), dolphin/dolphinrc
 theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,
             wallpapers/Simpleton, color-schemes/BreathSlate.colors
 ```
 
-Secrets (API tokens) go to `~/.config/zsh/secrets.zsh` (`chmod 600`), never to this repo.
+**Shell env (API tokens, DB passwords, private hosts and project IDs):** the source of truth is the Proton Pass vault `env-secrets`
+(one login item per variable: title = variable name, password = value). `secrets-sync` copies the vault into
+KWallet; `~/.config/zsh/secrets.zsh` (from this repo, holds no values) exports them at shell start (~10 ms,
+works offline). The user timer `secrets-sync.timer` syncs 1 min after login and every 15 min, so a secret added
+to the vault reaches new terminals by itself; run `secrets-sync` for an immediate sync.
+New machine: `pass-cli login` once (the timer does the rest). Log: `journalctl --user -u secrets-sync`.
+Optional per-machine overrides go to `~/.config/zsh/local.zsh` (sourced if present), never to this repo.
 
 ## Notes
 
