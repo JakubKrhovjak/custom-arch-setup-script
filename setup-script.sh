@@ -312,17 +312,11 @@ print_info "Installing rclone, restoring rclone.conf from the repo (age passphra
 sudo pacman -S --needed --noconfirm rclone age sqlite
 bash "$REPO/pc/rclone-conf.sh" decrypt || print_error "rclone.conf not restored; later: bash $REPO/pc/rclone-conf.sh decrypt"
 
-# Standard Notes (Proton's encrypted notes, official Flatpak): end-to-end encrypted, syncs across devices by itself.
-# Sign in after the setup; the notes come down with the sync.
-print_info "Installing Standard Notes (Flatpak)..."
-sudo flatpak install -y --noninteractive flathub org.standardnotes.standardnotes
-# Its Electron GPU process crashes on start (eglCreateImage failed) and no window appears: launch it with
-# --disable-gpu through a user copy of the launcher (overrides the Flatpak one, only for this app)
-SN_DESKTOP=org.standardnotes.standardnotes.desktop
-mkdir -p "$HOME/.local/share/applications"
-sed -E '/^Exec=/ s/ org\.standardnotes\.standardnotes/ org.standardnotes.standardnotes --disable-gpu/' \
-    "/var/lib/flatpak/exports/share/applications/$SN_DESKTOP" > "$HOME/.local/share/applications/$SN_DESKTOP"
-print_status "Standard Notes installed (GPU off); sign in to sync the notes"
+# Notesnook (Flatpak): end-to-end encrypted notes, syncs across all devices (desktop, web, mobile) by itself.
+# Sign in after the setup (login in Proton Pass, vault Personal); the notes come down with the sync.
+print_info "Installing Notesnook (Flatpak)..."
+sudo flatpak install -y --noninteractive flathub com.notesnook.Notesnook
+print_status "Notesnook installed; sign in to sync the notes"
 
 # Install Claude Code (native installer → ~/.local/bin/claude, updates itself)
 print_info "Installing Claude Code..."
