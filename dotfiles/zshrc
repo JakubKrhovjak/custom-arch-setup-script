@@ -9,8 +9,21 @@ command -v starship >/dev/null && eval "$(starship init zsh)"
 # Optional per-machine overrides — never in git
 [[ -f "$HOME/.config/zsh/local.zsh" ]] && source "$HOME/.config/zsh/local.zsh"
 
-export PATH="$HOME/.local/bin:$PATH"
+# Tab background colour and emoji by directory (list in ~/.config/tab-colors)
+[[ -f "$HOME/.config/zsh/tab-colors.zsh" ]] && source "$HOME/.config/zsh/tab-colors.zsh"
+
+export PATH="$HOME/.local/bin:$PATH:$HOME/go/bin"
+
+# JetBrains IDEs run on the SDKMAN Java 25
+export WEBSTORM_JDK="$HOME/.sdkman/candidates/java/25"
+export IDEA_JDK="$HOME/.sdkman/candidates/java/25"
+
 alias k=kubectl
+alias lm='limactl shell --workdir /lab linux-lab'
+
+# Claude via the T-Mobile Keystone gateway (lives in the work repo, not here)
+[[ -f "$HOME/projects/tmobile/scripts/claude-keystone.zsh" ]] && source "$HOME/projects/tmobile/scripts/claude-keystone.zsh"
+[[ -f "$HOME/.config/zsh/claude-keystone-linux.zsh" ]] && source "$HOME/.config/zsh/claude-keystone-linux.zsh"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"

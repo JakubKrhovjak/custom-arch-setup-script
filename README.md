@@ -27,6 +27,14 @@ Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in th
 
 Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first boot, BIOS updates).
 
+### After the setup (needs your logins, so not automated)
+
+1. Proton Pass CLI: `pass-cli login` (opens nothing, copy the printed URL to a browser). Shell secrets arrive
+   within a minute via `secrets-sync.timer`; open a new terminal.
+2. GitHub: `gh auth login` (SSH key), needed for the private repos below.
+3. Mindmap (private repo): `git clone git@github.com:JakubKrhovjak/mindmap.git ~/projects/mindmap && ~/projects/mindmap/mindmap install`
+   (links `~/.local/bin/mindmap`, adds the app to the menu; Node + pnpm come from `setup-script.sh`).
+
 ## What gets installed
 
 **Desktop (minimal):** Plasma without `kde-applications-meta` — Dolphin, Kate, Okular, Gwenview, Spectacle,
@@ -58,7 +66,8 @@ it before Joplin's first start (needs the rclone config above). Manual: `pc/jopl
 ## Layout
 
 ```
-dotfiles/   zshrc, zsh/base.zsh, zsh/secrets.zsh, bin/secrets-sync, systemd/secrets-sync.{service,timer},
+dotfiles/   zshrc, zsh/base.zsh, zsh/secrets.zsh, zsh/tab-colors.zsh + tab-colors, bin/secrets-sync,
+            systemd/secrets-sync.{service,timer},
             starship.toml, ghostty/config,
             klassy/klassyrc (14 px corners), dolphin/dolphinrc
 theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,

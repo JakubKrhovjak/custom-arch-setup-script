@@ -110,6 +110,8 @@ install_dotfile() { # source in repo, target
 install_dotfile "$REPO/dotfiles/zshrc" "$HOME/.zshrc"
 install_dotfile "$REPO/dotfiles/zsh/base.zsh" "$HOME/.config/zsh/base.zsh"
 install_dotfile "$REPO/dotfiles/zsh/secrets.zsh" "$HOME/.config/zsh/secrets.zsh"   # KWallet loader, no values
+install_dotfile "$REPO/dotfiles/zsh/tab-colors.zsh" "$HOME/.config/zsh/tab-colors.zsh"
+install_dotfile "$REPO/dotfiles/tab-colors" "$HOME/.config/tab-colors"
 install -Dm755 "$REPO/dotfiles/bin/secrets-sync" "$HOME/.local/bin/secrets-sync"     # Proton Pass → KWallet
 install -Dm644 -t "$HOME/.config/systemd/user" "$REPO/dotfiles/systemd/secrets-sync.service" "$REPO/dotfiles/systemd/secrets-sync.timer"
 systemctl --user daemon-reload

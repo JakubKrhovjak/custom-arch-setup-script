@@ -126,7 +126,8 @@ nvm install --lts && nvm alias default 'lts/*'
 NVM_STATUS=$?
 set -e
 [ "$NVM_STATUS" -eq 0 ] || { print_error "Node.js installation failed"; exit 1; }
-print_status "Node.js installed: $(node --version), npm $(npm --version)"
+npm install -g pnpm   # pnpm projects (mindmap install, …)
+print_status "Node.js installed: $(node --version), npm $(npm --version), pnpm $(pnpm --version)"
 
 # Install Python
 print_info "Installing Python..."

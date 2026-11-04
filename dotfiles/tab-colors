@@ -1,0 +1,11 @@
+# Barva tabu podle adresáře: cesta  barva-pozadí  emoji
+# Platí nejdelší shoda (i pro podadresáře). Mimo seznam výchozí barva.
+~/projects/iot                   #161e2e  🔵
+~/projects/manjaro-setup-script  #16261a  🟢
+~/projects/simpleton-theme       #16261a  🟢
+~/projects/top-leader-be         #221a2e  🟣
+~/projects/top-leader-fe         #221a2e  🟣
+~/projects/top-leader-e2e        #221a2e  🟣
+~/projects/pelennor              #2a2214  🟠
+/etc                             #2a1616  🔴
+/mnt/data/vm                     #2a1616  🔴
