@@ -10,6 +10,7 @@ Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in th
 | `post-install.sh` | (first login) | Simpleton theme (desktop + login screen), Ghostty as default terminal, dotfiles, `us,cz` keyboard |
 | `setup-script.sh` | (first login) | dev tools (below) |
 | `secureboot-tpm2.sh` | `sudo`, 3 phases | Secure Boot + TPM2 later (installed without setup mode) or again after a BIOS update |
+| `tmobile/setup.sh` | optional, by hand | T-Mobile CZ work: FortiClient VPN VM, SSH tunnel, Firefox PAC + Windows UA, app environment; secrets from Proton Pass — see [`tmobile/README.md`](tmobile/README.md) |
 
 ## Installation
 
