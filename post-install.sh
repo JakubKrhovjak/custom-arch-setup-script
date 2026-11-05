@@ -113,6 +113,13 @@ install_dotfile "$REPO/dotfiles/zsh/secrets.zsh" "$HOME/.config/zsh/secrets.zsh"
 install_dotfile "$REPO/dotfiles/zsh/tab-colors.zsh" "$HOME/.config/zsh/tab-colors.zsh"
 install_dotfile "$REPO/dotfiles/tab-colors" "$HOME/.config/tab-colors"
 install -Dm755 "$REPO/dotfiles/bin/secrets-sync" "$HOME/.local/bin/secrets-sync"     # Proton Pass → KWallet
+# Firefox hardening for every profile: uBlock Origin + Proton Pass, no saved logins, no telemetry/sponsored
+# content, strict tracking protection, HTTPS-Only, DNS over HTTPS (check in about:policies)
+sudo install -Dm644 "$REPO/dotfiles/firefox/policies.json" /etc/firefox/policies/policies.json
+# Firefox is the default browser (links from every app, KDE included); Chrome stays installed for work
+xdg-settings set default-web-browser firefox.desktop
+xdg-mime default firefox.desktop text/html x-scheme-handler/http x-scheme-handler/https application/xhtml+xml
+kwriteconfig6 --file kdeglobals --group General --key BrowserApplication firefox.desktop
 install -Dm644 -t "$HOME/.config/systemd/user" "$REPO/dotfiles/systemd/secrets-sync.service" "$REPO/dotfiles/systemd/secrets-sync.timer"
 systemctl --user daemon-reload
 systemctl --user enable secrets-sync.timer   # every 15 min; fails quietly until pass-cli login

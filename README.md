@@ -40,7 +40,13 @@ Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first b
 
 **Desktop (minimal):** Plasma without `kde-applications-meta` — Dolphin, Kate, Okular, Gwenview, Spectacle,
 Ark, Filelight, KCalc, Ghostty (no Konsole), Firefox, VLC, Flatpak (Flathub), printing (CUPS),
-Thunderbolt/USB4 dock authorization (`bolt` + `plasma-thunderbolt`: System Settings → Thunderbolt).
+Thunderbolt/USB4 dock authorization (`bolt` + `plasma-thunderbolt`: System Settings → Thunderbolt),
+KDE Connect (iPhone/Android; ufw opens 1714–1764), KWallet Manager.
+
+**Firefox (default browser):** hardened by `/etc/firefox/policies/policies.json` (from `dotfiles/firefox/`):
+uBlock Origin + Proton Pass installed, no saving of logins (Proton Pass), no telemetry/studies/Pocket/sponsored content,
+strict tracking protection, HTTPS-Only, DNS over HTTPS (Cloudflare, with fallback), new notification/location
+requests blocked. Nothing is locked except telemetry; check with `about:policies`. Chrome (Flatpak) stays for work.
 Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD GPU (Mesa, Vulkan).
 
 **Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Podman (rootless) + Compose, Go, Terraform,

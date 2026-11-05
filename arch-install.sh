@@ -205,7 +205,10 @@ pacstrap -K /mnt \
     kscreen \
     bolt \
     plasma-thunderbolt \
+    kdeconnect \
     kwallet-pam \
+    kwalletmanager \
+    libsecret \
     ksshaskpass \
     kde-gtk-config \
     breeze-gtk \
