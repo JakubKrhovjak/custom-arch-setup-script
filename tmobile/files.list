@@ -1,0 +1,12 @@
+# Files kept in the Proton Pass vault $TM_PASS_VAULT (one note per file, base64 of the content).
+# title                          source/target (relative to $HOME)           mode
+# Titles under vm/ are never written to the host: vm.sh provision copies them into the VM.
+.config/tmobile/tmcz-ca.pem                  .config/tmobile/tmcz-ca.pem                  644
+.config/tmobile/slovak-telekom-root-ca2.pem  .config/tmobile/slovak-telekom-root-ca2.pem  644
+.kube/configs/tmobile.yaml                   .kube/configs/tmobile.yaml                   600
+.kube/configs/tmobile-eks.yaml               .kube/configs/tmobile-eks.yaml               600
+.aws/config                                  .aws/config                                  600
+.aws/credentials                             .aws/credentials                             600
+.m2/settings.xml                             .m2/settings.xml                             600
+vm/client-cert.p12                           Downloads/Certificates.p12                   600
+vm/vpn-fed.pem                               Downloads/vpn-fed.pem                        600

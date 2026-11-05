@@ -1,0 +1,9 @@
+[Unit]
+Description=Port forward 127.0.0.1:15432 to test2 runtime Postgres (q2prodcat) via the @VM_NAME@ VM
+# Started on demand (systemctl --user start), not at login
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ssh -N -L 127.0.0.1:15432:q2prodcat.hhcz.dev.acp.cz.tmo:5432 -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 @VM_USER@@@VM_IP@
+Restart=always
+RestartSec=10

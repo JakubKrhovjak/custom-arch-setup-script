@@ -1,0 +1,13 @@
+[Unit]
+Description=HTTP proxy on 127.0.0.1:@HTTP_PROXY_PORT@ into the T-Mobile SOCKS tunnel
+# For tools that speak only HTTP proxies (Claude Code via the Keystone gateway, HTTPS_PROXY)
+After=tmobile-socks.service
+Wants=tmobile-socks.service
+
+[Service]
+ExecStart=%h/.local/bin/pproxy -l http://127.0.0.1:@HTTP_PROXY_PORT@ -r socks5://127.0.0.1:@SOCKS_PORT@
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

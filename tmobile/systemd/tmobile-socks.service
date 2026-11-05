@@ -1,0 +1,16 @@
+[Unit]
+Description=SOCKS tunnel into the T-Mobile VPN via the @VM_NAME@ VM
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+# Skips quietly (inactive, not failed) while the VM is off; tmobile-socks-watch.timer starts it once SSH answers.
+# A TCP probe, not ping: the Windows firewall drops ICMP
+ExecCondition=/usr/bin/timeout 2 /usr/bin/bash -c "exec 3<>/dev/tcp/@VM_IP@/22"
+ExecStart=/usr/bin/ssh -N -D 127.0.0.1:@SOCKS_PORT@ -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 @VM_USER@@@VM_IP@
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

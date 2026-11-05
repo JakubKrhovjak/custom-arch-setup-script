@@ -1,0 +1,6 @@
+[Unit]
+Description=Start the T-Mobile SOCKS tunnel when the @VM_NAME@ VM is reachable
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'systemctl --user is-active --quiet tmobile-socks.service || ! /usr/bin/timeout 2 /usr/bin/bash -c "exec 3<>/dev/tcp/@VM_IP@/22" 2>/dev/null || systemctl --user start tmobile-socks.service'

@@ -1,0 +1,23 @@
+{
+  "policies": {
+    "ExtensionSettings": {
+      "{a6c4a591-f1b2-4f03-b3ff-767e5bedf4e7}": {
+        "installation_mode": "normal_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/user-agent-string-switcher/latest.xpi"
+      }
+    },
+    "3rdparty": {
+      "Extensions": {
+        "{a6c4a591-f1b2-4f03-b3ff-767e5bedf4e7}": {
+          "json": "{\"json-guid\": \"tmobile-windows-ua-v2\", \"mode\": \"custom\", \"custom\": {\"telekom.de, telekom.net, telekom.sk, t-mobile.cz, t-systems.cz, yo-digital.com, st.sk\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0\"}}"
+        }
+      }
+    },
+    "Proxy": {
+      "Mode": "autoConfig",
+      "AutoConfigURL": "file://@PAC@",
+      "UseProxyForDNS": true,
+      "Locked": false
+    }
+  }
+}
