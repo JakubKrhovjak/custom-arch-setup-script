@@ -116,7 +116,7 @@ install -Dm755 "$REPO/dotfiles/bin/secrets-sync" "$HOME/.local/bin/secrets-sync"
 # Firefox hardening for every profile: uBlock Origin + Proton Pass, no saved logins, no telemetry/sponsored
 # content, strict tracking protection, HTTPS-Only, DNS over HTTPS (check in about:policies)
 sudo install -Dm644 "$REPO/dotfiles/firefox/policies.json" /etc/firefox/policies/policies.json
-# Firefox is the default browser (links from every app, KDE included); Chrome stays installed for work
+# Firefox is the default browser (links from every app, KDE included); Chromium is the second browser
 xdg-settings set default-web-browser firefox.desktop
 xdg-mime default firefox.desktop text/html x-scheme-handler/http x-scheme-handler/https application/xhtml+xml
 kwriteconfig6 --file kdeglobals --group General --key BrowserApplication firefox.desktop

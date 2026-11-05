@@ -46,13 +46,14 @@ KDE Connect (iPhone/Android; ufw opens 1714–1764), KWallet Manager.
 **Firefox (default browser):** hardened by `/etc/firefox/policies/policies.json` (from `dotfiles/firefox/`):
 uBlock Origin + Proton Pass installed, no saving of logins (Proton Pass), no telemetry/studies/Pocket/sponsored content,
 strict tracking protection, HTTPS-Only, DNS over HTTPS (Cloudflare, with fallback), new notification/location
-requests blocked. Nothing is locked except telemetry; check with `about:policies`. Chrome (Flatpak) stays for work.
+requests blocked. Nothing is locked except telemetry; check with `about:policies`. Chromium (Arch repo) is the second browser
+(Chrome DevTools incl. Lighthouse).
 Fonts: Noto (+ emoji), DejaVu, Liberation, Hack Nerd Font, Terminus (TTY). AMD GPU (Mesa, Vulkan).
 
 **Dev tools (`setup-script.sh`):** git, GitHub CLI, jq, Podman (rootless) + Compose, Go, Terraform,
 kubectl, Helm, k9s, kind, trivy, k3s, SDKMAN (Java 21 + 25 Temurin, Maven, Gradle), NVM (Node.js LTS),
 Python, static analysis for the Claude `/cr` skill (semgrep, lizard, PMD), Google Cloud CLI + GKE auth plugin, QEMU/KVM + virt-manager (UEFI + TPM guests),
-JetBrains Toolbox, VS Code, Claude Code, Notesnook (Flatpak), Proton VPN, Proton Pass + rclone.
+JetBrains Toolbox, VS Code, Claude Code, Chromium, Postman (Flatpak), Notesnook (Flatpak), Proton VPN, Proton Pass + rclone.
 
 **System health (`setup-script.sh`):** ufw, monthly `btrfs scrub` on every btrfs filesystem, `smartd` (SSD self-tests,
 warnings as desktop notifications via `/usr/local/bin/smartd-notify`), `informant` (unread Arch news blocks `pacman -Syu`;

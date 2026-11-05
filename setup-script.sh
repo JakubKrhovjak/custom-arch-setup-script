@@ -255,10 +255,16 @@ print_info "Installing JetBrains Toolbox and VS Code..."
 yay -S --needed --noconfirm jetbrains-toolbox visual-studio-code-bin
 print_status "JetBrains Toolbox and VS Code installed"
 
-# Install Google Chrome (Flatpak from Flathub, system-wide; Flathub is enabled by arch-install.sh)
-print_info "Installing Google Chrome (Flatpak)..."
-sudo flatpak install -y --noninteractive flathub com.google.Chrome
-print_status "Google Chrome installed"
+# Chromium (Arch repo) as the second browser next to Firefox: Chrome DevTools incl. Lighthouse,
+# found by the Lighthouse CLI at /usr/bin/chromium (CHROME_PATH)
+print_info "Installing Chromium..."
+sudo pacman -S --needed --noconfirm chromium
+print_status "Chromium installed"
+
+# Postman (Flatpak from Flathub): REST API testing
+print_info "Installing Postman (Flatpak)..."
+sudo flatpak install -y --noninteractive flathub com.getpostman.Postman
+print_status "Postman installed"
 
 # Install Ferdium (AUR, Electron): WhatsApp, Messenger and other messengers as services in one app (replaces ZapZap).
 # Starts at login hidden in the tray; Ferdium merges this partial settings.json with its defaults on first start.
