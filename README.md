@@ -1,13 +1,14 @@
 # Minimal Arch Linux setup
 
-Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in the **Simpleton** look
-(monochrome icons, dark BreathSlate colors, rounded Klassy widgets), Ghostty + zsh + Starship, and a backend dev toolchain.
+Scripts that build a minimal, encrypted Arch Linux desktop with [Desk](https://github.com/JakubKrhovjak/desk)
+(Hyprland with a custom shell), Ghostty + zsh + Starship, and a backend dev toolchain.
+The earlier version with a choice of KDE Plasma in the Simpleton look is kept in the `plasma` branch.
 
 | Script | Run | What it does |
 |---|---|---|
-| `arch-install.sh` | Arch ISO, as root | LUKS2 (Argon2id) + btrfs (`@ @home @cache @log`), systemd-boot + UKI (`linux-zen` default, `linux-lts` fallback), minimal Plasma, zram + earlyoom, Timeshift, yay; Secure Boot + TPM2 when the firmware is in setup mode |
-| `first-login.sh` | automatically at first login | opens Ghostty and runs the two scripts below with progress on screen (log `~/arch-setup/first-login.log`); on failure runs again at next login |
-| `post-install.sh` | (first login) | Simpleton theme (desktop + login screen), Ghostty as default terminal, dotfiles, `us,cz` keyboard |
+| `arch-install.sh` | Arch ISO, as root | LUKS2 (Argon2id) + btrfs (`@ @home @cache @log`), systemd-boot + UKI (`linux-zen` default, `linux-lts` fallback), greetd, zram + earlyoom, Timeshift, yay; Secure Boot + TPM2 when the firmware is in setup mode |
+| `first-login.sh` | automatically at first login | runs the scripts below on the console with progress on screen (log `~/arch-setup/first-login.log`); on failure runs again at next login |
+| `desk-install.sh` | (first login) | dotfiles (`dotfiles-install.sh`), the desk repository in `~/.config` and its `install.sh`: Hyprland, shell, keyd, graphical login screen |
 | `setup-script.sh` | (first login) | dev tools (below) |
 | `secureboot-tpm2.sh` | `sudo`, 3 phases | Secure Boot + TPM2 later (installed without setup mode) or again after a BIOS update |
 | `tmobile/setup.sh` | optional, by hand | T-Mobile CZ work: FortiClient VPN VM, SSH tunnel, Firefox PAC + Windows UA, app environment; secrets from Proton Pass — see [`tmobile/README.md`](tmobile/README.md) |
@@ -24,7 +25,8 @@ Scripts that build a minimal, encrypted Arch Linux desktop with KDE Plasma in th
 3. `umount -R /mnt && cryptsetup close root && reboot`. With Secure Boot: BIOS → Secure Boot → **Enabled**
    (mode Custom, do not restore default keys). The first boot asks for the disk passphrase once and
    enrolls TPM2 (`tpm2-enroll.service`); from then on the disk unlocks without it.
-4. Log in to Plasma: Ghostty opens and runs the setup (asks for the sudo password once). Then log out and in.
+4. Log in on the text login screen: the setup runs on the console (asks for the sudo password once), then Enter starts the desktop.
+   The graphical login screen appears after the next reboot.
 
 Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first boot, BIOS updates).
 
@@ -39,10 +41,9 @@ Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first b
 
 ## What gets installed
 
-**Desktop (minimal):** Plasma without `kde-applications-meta` — Dolphin, Kate, Okular, Gwenview, Spectacle,
-Ark, Filelight, KCalc, Ghostty (no Konsole), Firefox, VLC, Flatpak (Flathub), printing (CUPS),
-Thunderbolt/USB4 dock authorization (`bolt` + `plasma-thunderbolt`: System Settings → Thunderbolt),
-KDE Connect (iPhone/Android; ufw opens 1714–1764), KWallet Manager.
+**Desktop (minimal):** Desk with greetd and gnome-keyring, Ghostty, Firefox, VLC, Flatpak (Flathub), printing (CUPS),
+Thunderbolt/USB4 dock authorization (`bolt`, `boltctl`),
+KDE Connect (iPhone/Android; ufw opens 1714–1764).
 
 **Firefox (default browser):** hardened by `/etc/firefox/policies/policies.json` (from `dotfiles/firefox/`):
 uBlock Origin + Proton Pass installed, no saving of logins (Proton Pass), no telemetry/studies/Pocket/sponsored content,
@@ -77,15 +78,13 @@ the restore script `pc/joplin-proton.sh` is in the git history).
 ```
 dotfiles/   zshrc, zsh/base.zsh, zsh/secrets.zsh, zsh/tab-colors.zsh + tab-colors, bin/secrets-sync,
             systemd/secrets-sync.{service,timer},
-            starship.toml, ghostty/config,
-            klassy/klassyrc (14 px corners), dolphin/dolphinrc
-theme/      icons/Simpleton, plasma/desktoptheme/simpleton, plasma/look-and-feel/org.simpleton.dark.desktop,
-            wallpapers/Simpleton, color-schemes/BreathSlate.colors
+            starship.toml, ghostty/config
+vm-test/    clean install and login screen test in a QEMU VM
 ```
 
 **Shell env (API tokens, DB passwords, private hosts and project IDs):** the source of truth is the Proton Pass vault `env-secrets`
 (one login item per variable: title = variable name, password = value). `secrets-sync` copies the vault into
-KWallet; `~/.config/zsh/secrets.zsh` (from this repo, holds no values) exports them at shell start (~10 ms,
+the Secret Service (gnome-keyring); `~/.config/zsh/secrets.zsh` (from this repo, holds no values) exports them at shell start (~10 ms,
 works offline). The user timer `secrets-sync.timer` syncs 1 min after login and every 15 min, so a secret added
 to the vault reaches new terminals by itself; run `secrets-sync` for an immediate sync.
 New machine: `pass-cli login` once (the timer does the rest). Log: `journalctl --user -u secrets-sync`.
@@ -93,12 +92,6 @@ Optional per-machine overrides go to `~/.config/zsh/local.zsh` (sourced if prese
 
 ## Notes
 
-- The theme is installed to `/usr/share` so the SDDM login screen (user `sddm`) can read it.
-  After changing the theme, run `post-install.sh` again.
-- Klassy is a C++ plugin built against the installed KDecoration/Qt. After a Plasma or Qt update rebuild it
-  (`yay -S klassy-git`) before logging in again, otherwise windows fall back to Breeze decorations.
-- AUR builds use all cores via `~/.makepkg.conf` (`MAKEFLAGS="-j$(nproc)"`, written by `post-install.sh`).
+- AUR builds use all cores via `~/.makepkg.conf` (`MAKEFLAGS="-j$(nproc)"`, written by `desk-install.sh`).
 - Timeshift snapshots only `@`; UKIs live on the ESP. After restoring a snapshot with another kernel,
   rebuild them: `sudo mkinitcpio -P`.
-- `theme/plasma/desktoptheme/simpleton` contains unmodified SVGs from Manjaro's Breath theme (CC BY-ND);
-  the wallpaper is Ant-Dark by EliverLara (GPL-3.0), recolored to the BreathSlate palette.

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Runs arch-install.sh on the ISO's serial console and answers its questions.
 
-Usage: install.py <work directory> <desktop number>
+Usage: install.py <work directory>
 Before the reboot it adds what the test needs and a real install does not have: sshd with a test key.
 """
 import re
@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 
 work = Path(sys.argv[1])
-desktop = sys.argv[2]
 USER = "tester"
 PASSWORD = "tester1234"
 PASSPHRASE = "disk1234"
@@ -83,8 +82,6 @@ expect(r"Disk encryption passphrase: ")
 send(PASSPHRASE)
 expect(r"Disk encryption passphrase \(again\): ")
 send(PASSPHRASE)
-expect(r"Desktop number \[1-2\]: ")
-send(desktop)
 expect(r"Type 'yes' to continue:")
 send("yes")
 match = expect(r"INSTALL_RC=(\d+)", 3000)

@@ -57,7 +57,7 @@ Check with `bash tmobile/files.sh status`. The personal certificate is valid for
 | `setup.sh [--vm-iso ISO]` | `tunnel.sh` → `firefox.sh` → `apps.sh` (+ `vm.sh create`) |
 | `vm.sh create / provision / status / console / ssh` | VM `tmobile-vpn`: 2 vCPU, 6 GB RAM, 64 GB thin qcow2, UEFI Secure Boot, TPM 2.0, fixed IP 192.168.122.239 (DHCP reservation) |
 | `tunnel.sh` | user units `tmobile-socks` (1080), `tmobile-socks-watch.timer` (starts the tunnel when the VM is up), `tmobile-http-proxy` (3128, pproxy, for Claude Keystone), on demand `tmobile-dev1-pg` (15433), `tmobile-test2-pg` (15432) |
-| `firefox.sh` | `~/.config/tmobile/proxy.pac` + merges `firefox/policies-tmobile.json` (PAC proxy, User-Agent String Switcher with a Windows UA for Telekom/T-Mobile domains) into `/etc/firefox/policies/policies.json`. Run it again after `post-install.sh`, which overwrites that file |
+| `firefox.sh` | `~/.config/tmobile/proxy.pac` + merges `firefox/policies-tmobile.json` (PAC proxy, User-Agent String Switcher with a Windows UA for Telekom/T-Mobile domains) into `/etc/firefox/policies/policies.json`. Run it again after `dotfiles-install.sh`, which overwrites that file |
 | `apps.sh [--clone]` | kubelogin, uv + Python 3.12 (PCS), `files.sh restore`, kubeconfig merge, `claude-keystone` via the HTTP proxy, work folder + `tmobile-proton-sync.timer`, repos |
 | `files.sh push / restore / get / status` | Proton Pass vault ↔ files |
 

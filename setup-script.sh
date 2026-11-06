@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Dev tools for Arch Linux. Run as your user (not root) after post-install.sh: bash setup-script.sh
+# Dev tools for Arch Linux. Run as your user (not root) after desk-install.sh: bash setup-script.sh
 # Safe to run again — installed tools are skipped.
 
 set -e
@@ -271,13 +271,12 @@ print_status "Postman installed"
 print_info "Installing Ferdium..."
 yay -S --needed --noconfirm ferdium-bin
 FERDIUM_SETTINGS="$HOME/.config/Ferdium/config/settings.json"
-mkdir -p "$(dirname "$FERDIUM_SETTINGS")" "$HOME/.config/autostart"
+mkdir -p "$(dirname "$FERDIUM_SETTINGS")"
 [ -f "$FERDIUM_SETTINGS" ] || echo '{}' > "$FERDIUM_SETTINGS"
 jq '.autoLaunchOnStart = true | .autoLaunchInBackground = true | .startMinimized = true
     | .enableSystemTray = true | .minimizeToSystemTray = true | .closeToSystemTray = true' \
     "$FERDIUM_SETTINGS" > "$FERDIUM_SETTINGS.tmp" && mv "$FERDIUM_SETTINGS.tmp" "$FERDIUM_SETTINGS"
-cp /usr/share/applications/ferdium.desktop "$HOME/.config/autostart/ferdium.desktop"
-print_status "Ferdium installed, starts at login in the tray"
+print_status "Ferdium installed, Desk starts it at login in the tray (desk/autostart.json)"
 
 # Teams (Flatpak; replaces teams-for-linux from AUR) and Flatseal (Flatpak permission manager)
 print_info "Installing Teams for Linux and Flatseal (Flatpak)..."
@@ -291,13 +290,13 @@ bash "$REPO/pc/protonvpn-tray.sh"
 print_status "Proton VPN installed, tray icons in Simpleton style"
 
 # Proton Pass: desktop app + CLI. Both from AUR; proton-pass-cli builds from source.
-# The CLI feeds the shell secrets: vault env-secrets → secrets-sync → KWallet → ~/.config/zsh/secrets.zsh.
+# The CLI feeds the shell secrets: vault env-secrets → secrets-sync → Secret Service → ~/.config/zsh/secrets.zsh.
 # Login is a browser flow (the URL is printed, not opened), so it is left for after the setup.
 print_info "Installing Proton Pass (app + CLI)..."
 yay -S --needed --noconfirm proton-pass-bin proton-pass-cli
 if pass-cli info >/dev/null 2>&1 && command -v secrets-sync >/dev/null; then
     secrets-sync || print_error "secrets-sync failed; later: secrets-sync"
-    print_status "Proton Pass installed, shell secrets synced to KWallet"
+    print_status "Proton Pass installed, shell secrets synced to Secret Service"
 else
     print_status "Proton Pass installed. Shell secrets: run pass-cli login once; secrets-sync.timer syncs within 15 min (or run secrets-sync)"
 fi

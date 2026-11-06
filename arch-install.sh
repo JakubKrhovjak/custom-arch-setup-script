@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Minimal Arch Linux installer: LUKS2 + btrfs + systemd-boot with UKI, minimal KDE Plasma.
+# Minimal Arch Linux installer: LUKS2 + btrfs + systemd-boot with UKI, Desk (Hyprland with the custom shell).
 # Run from the Arch ISO live environment: bash arch-install.sh
-# After first login: bash ~/arch-setup/post-install.sh (look & feel), then setup-script.sh (dev tools),
-# optionally secureboot-tpm2.sh (Secure Boot + unlocking the disk via TPM2).
+# The first login runs first-login.sh (Desk, then dev tools).
+# Optionally later: secureboot-tpm2.sh (Secure Boot + unlocking the disk via TPM2).
 
 set -euo pipefail
 
@@ -69,35 +69,8 @@ USERNAME="${USERNAME:-lucky}"
 read_secret "User password" USER_PASS
 read_secret "Disk encryption passphrase" LUKS_PASS
 
-# Desktop: both come from this repo's setup, only one of them gets installed
-echo "Desktop:"
-echo "  1) Plasma Simpleton: KDE Plasma in the Simpleton look"
-echo "  2) Desk: Hyprland with the custom shell (github.com/JakubKrhovjak/desk), no Plasma"
-while true; do
-    read -rp "Desktop number [1-2]: " CHOICE
-    case "$CHOICE" in
-        1) DESKTOP=plasma; break ;;
-        2) DESKTOP=desk; break ;;
-        *) warn "Enter 1 or 2" ;;
-    esac
-done
-
-PLASMA_PACKAGES=(
-    plasma-desktop plasma-nm plasma-pa bluedevil powerdevil kscreen plasma-thunderbolt
-    kwallet-pam kwalletmanager ksshaskpass kde-gtk-config breeze-gtk xdg-desktop-portal-kde
-    plasma-systemmonitor kinfocenter sddm sddm-kcm plymouth-kcm
-    dolphin kio-extras ffmpegthumbs kdegraphics-thumbnailers kate okular gwenview spectacle ark filelight kcalc
-    print-manager
-)
 # The rest of Desk (Hyprland, shell, keyd) installs at first login from its own install.sh
 DESK_PACKAGES=(greetd greetd-tuigreet gnome-keyring xdg-desktop-portal-hyprland xdg-desktop-portal-gtk breeze-cursors)
-if [ "$DESKTOP" = plasma ]; then
-    DESKTOP_PACKAGES=("${PLASMA_PACKAGES[@]}")
-    DISPLAY_MANAGER=sddm
-else
-    DESKTOP_PACKAGES=("${DESK_PACKAGES[@]}")
-    DISPLAY_MANAGER=greetd
-fi
 
 # Secure Boot: keys can be enrolled only when the firmware is in setup mode (BIOS → Secure Boot → delete keys)
 SB_STATE=$(bootctl status 2>/dev/null | sed -n 's/^\s*Secure Boot:\s*//p')
@@ -226,7 +199,7 @@ pacstrap -K /mnt \
     bluez \
     bluez-utils \
     \
-    "${DESKTOP_PACKAGES[@]}" \
+    "${DESK_PACKAGES[@]}" \
     kdeconnect \
     power-profiles-daemon \
     bolt \
@@ -358,7 +331,7 @@ set -euo pipefail
 ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
 hwclock --systohc
 
-# Locale — English system, Czech formats are set per user in Plasma
+# Locale — English system
 sed -i -E 's/^#(en_US.UTF-8 UTF-8|cs_CZ.UTF-8 UTF-8)/\1/' /etc/locale.gen
 locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -419,22 +392,8 @@ printf '%s\n' 'vm.min_free_kbytes = 262144' 'vm.watermark_scale_factor = 100' 'k
 # Boot splash: firmware logo
 plymouth-set-default-theme bgrt
 
-if [ "${DESKTOP}" = plasma ]; then
-    # SDDM: Breeze greeter on KWin Wayland (no Xorg installed), no autologin;
-    # post-install.sh gives it the Simpleton look
-    mkdir -p /etc/sddm.conf.d
-    cat > /etc/sddm.conf.d/10-wayland.conf <<'EOF'
-[General]
-DisplayServer=wayland
-GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell
-
-[Wayland]
-CompositorCommand=kwin_wayland --drm --no-lockscreen --no-global-shortcuts --locale1
-EOF
-    printf '[Theme]\nCurrent=breeze\nCursorTheme=breeze_cursors\n' > /etc/sddm.conf.d/kde_settings.conf
-else
-    # greetd + tuigreet: SDDM's greeter needs KWin, which Desk does not install; no autologin
-    cat > /etc/greetd/config.toml <<'EOF'
+# greetd + tuigreet for the first login, no autologin; desk/greeter/install.sh replaces it with the graphical login screen
+cat > /etc/greetd/config.toml <<'EOF'
 [terminal]
 vt = 1
 
@@ -442,9 +401,8 @@ vt = 1
 command = "tuigreet --time --remember --asterisks --cmd /home/${USERNAME}/arch-setup/desk-session.sh"
 user = "greeter"
 EOF
-    # Keyring unlocked by the login password: the shell secrets and browsers read it through Secret Service
-    printf 'auth optional pam_gnome_keyring.so\nsession optional pam_gnome_keyring.so auto_start\n' >> /etc/pam.d/greetd
-fi
+# Keyring unlocked by the login password: the shell secrets and browsers read it through Secret Service
+printf 'auth optional pam_gnome_keyring.so\nsession optional pam_gnome_keyring.so auto_start\n' >> /etc/pam.d/greetd
 
 # UKIs + systemd-boot (finds UKIs in EFI/Linux on its own)
 mkinitcpio -P
@@ -457,7 +415,7 @@ rm -f /boot/initramfs-*.img
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
 # Services
-systemctl enable NetworkManager bluetooth ${DISPLAY_MANAGER} cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon cronie ufw paccache.timer reflector.timer uki-match-kernel
+systemctl enable NetworkManager bluetooth greetd cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon cronie ufw paccache.timer reflector.timer uki-match-kernel
 CHROOT
 
 printf '%s:%s\n' "$USERNAME" "$USER_PASS" | arch-chroot /mnt chpasswd
@@ -538,21 +496,7 @@ arch-chroot /mnt bash -c "pacman -U --noconfirm /home/${USERNAME}/yay-bin/yay-bi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 info "Copying setup scripts to /home/${USERNAME}/arch-setup..."
 cp -r "$SCRIPT_DIR" "/mnt/home/${USERNAME}/arch-setup"
-echo "$DESKTOP" > "/mnt/home/${USERNAME}/arch-setup/desktop"
-
-mkdir -p "/mnt/home/${USERNAME}/.config"
-if [ "$DESKTOP" = plasma ]; then
-    # First login: Ghostty opens and runs post-install.sh + setup-script.sh (first-login.sh removes this when done)
-    mkdir -p "/mnt/home/${USERNAME}/.config/autostart"
-    cat > "/mnt/home/${USERNAME}/.config/autostart/arch-setup.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Arch setup (first login)
-Exec=ghostty --title="Arch setup" -e bash /home/${USERNAME}/arch-setup/first-login.sh
-Terminal=false
-EOF
-fi
-arch-chroot /mnt chown -R "${USERNAME}:${USERNAME}" "/home/${USERNAME}/arch-setup" "/home/${USERNAME}/.config"
+arch-chroot /mnt chown -R "${USERNAME}:${USERNAME}" "/home/${USERNAME}/arch-setup"
 
 # ── Done ───────────────────────────────────────────────────────────────────────
 echo ""
@@ -573,9 +517,5 @@ if [ "$SECURE_BOOT" = yes ]; then
     echo "  First boot asks for the disk passphrase once, then TPM2 unlocks it."
     echo "  No boot with Secure Boot → disable it in BIOS (keys stay), boots as before."
 fi
-if [ "$DESKTOP" = plasma ]; then
-    warn "After first login Ghostty opens and runs the setup (look & feel + dev tools)."
-else
-    warn "After first login the setup runs on the console (Desk + dev tools), then the desktop starts."
-fi
+warn "After first login the setup runs on the console (Desk + dev tools), then the desktop starts."
 echo "  Log: ~/arch-setup/first-login.log"

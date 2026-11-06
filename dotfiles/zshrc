@@ -4,7 +4,7 @@ source "$HOME/.config/zsh/base.zsh"
 # Prompt
 command -v starship >/dev/null && eval "$(starship init zsh)"
 
-# Secrets: loaded from KWallet (filled from Proton Pass by secrets-sync); the file holds no values
+# Secrets: loaded from Secret Service (filled from Proton Pass by secrets-sync); the file holds no values
 [[ -f "$HOME/.config/zsh/secrets.zsh" ]] && source "$HOME/.config/zsh/secrets.zsh"
 # Optional per-machine overrides — never in git
 [[ -f "$HOME/.config/zsh/local.zsh" ]] && source "$HOME/.config/zsh/local.zsh"
