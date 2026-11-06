@@ -43,7 +43,7 @@ Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first b
 
 **Desktop (minimal):** Desk with greetd and gnome-keyring, Ghostty, Firefox, VLC, Flatpak (Flathub), printing (CUPS),
 Thunderbolt/USB4 dock authorization (`bolt`, `boltctl`),
-KDE Connect (iPhone/Android; ufw opens 1714–1764).
+LocalSend for file transfer with the phone (in the tray; ufw opens 53317 for the current local network).
 
 **Firefox (default browser):** hardened by `/etc/firefox/policies/policies.json` (from `dotfiles/firefox/`):
 uBlock Origin + Proton Pass installed, no saving of logins (Proton Pass), no telemetry/studies/Pocket/sponsored content,

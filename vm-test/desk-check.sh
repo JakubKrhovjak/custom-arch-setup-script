@@ -13,7 +13,7 @@ export HYPRLAND_INSTANCE_SIGNATURE=$signature
 wayland=$(cd "$XDG_RUNTIME_DIR" && ls wayland-* 2>/dev/null | grep -v lock | head -1)
 export WAYLAND_DISPLAY=$wayland
 echo "instance=$signature wayland=$wayland"
-echo "--- processes"; pgrep -a 'Hyprland|start-hyprland|^qs$|gnome-keyring|kdeconnect' | cut -c1-90
+echo "--- processes"; pgrep -a 'Hyprland|start-hyprland|^qs$|gnome-keyring' | cut -c1-90
 echo "--- monitors"; hyprctl monitors -j 2>/dev/null | jq -c '.[] | {name, width, height}'
 echo "--- layers"; hyprctl layers -j 2>/dev/null | jq -r '.. | .namespace? // empty' | sort -u | paste -sd' '
 echo "--- config errors"; hyprctl configerrors 2>&1 | head -10 | cut -c1-160

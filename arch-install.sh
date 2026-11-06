@@ -200,7 +200,6 @@ pacstrap -K /mnt \
     bluez-utils \
     \
     "${DESK_PACKAGES[@]}" \
-    kdeconnect \
     power-profiles-daemon \
     bolt \
     libsecret \

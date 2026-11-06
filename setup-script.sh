@@ -172,8 +172,14 @@ sudo ufw allow from 10.43.0.0/16 comment 'k3s services'
 sudo ufw allow from 172.16.0.0/12 comment 'container networks'
 sudo ufw allow in on virbr0 comment 'libvirt NAT (DHCP, DNS)'
 sudo ufw allow in on br-plc comment 'PLC lab network (VM, PLC)'   # bridge to the PLC; the rule is inert without it
-sudo ufw allow 1714:1764/udp comment 'KDE Connect'   # phone pairing, discovery, file transfer
-sudo ufw allow 1714:1764/tcp comment 'KDE Connect'
+# LocalSend: file transfer with the phone, only from the network this computer is on now (another network needs its own rule)
+LAN_DEVICE=$(ip -4 route show default | awk 'NR == 1 { print $5 }')
+LAN=$(ip -4 route show scope link dev "$LAN_DEVICE" 2>/dev/null | awk 'NR == 1 { print $1 }')
+if [ -n "$LAN" ]; then
+    sudo ufw allow from "$LAN" to any port 53317 comment 'LocalSend'
+else
+    print_info "No local network found, LocalSend rule skipped; later: sudo ufw allow from <network> to any port 53317"
+fi
 sudo ufw --force enable
 sudo systemctl enable ufw
 print_status "Firewall active: $(sudo ufw status | head -n1)"
@@ -277,6 +283,16 @@ jq '.autoLaunchOnStart = true | .autoLaunchInBackground = true | .startMinimized
     | .enableSystemTray = true | .minimizeToSystemTray = true | .closeToSystemTray = true' \
     "$FERDIUM_SETTINGS" > "$FERDIUM_SETTINGS.tmp" && mv "$FERDIUM_SETTINGS.tmp" "$FERDIUM_SETTINGS"
 print_status "Ferdium installed, Desk starts it at login in the tray (desk/autostart.json)"
+
+# LocalSend: file transfer with the phone. Desk starts it at login hidden in the tray (desk/autostart.json);
+# closing its window keeps it in the tray, so receiving keeps working.
+print_info "Installing LocalSend..."
+yay -S --needed --noconfirm localsend-bin
+LOCALSEND_SETTINGS="$HOME/.local/share/org.localsend.localsend_app/shared_preferences.json"
+mkdir -p "$(dirname "$LOCALSEND_SETTINGS")"
+[ -f "$LOCALSEND_SETTINGS" ] || echo '{}' > "$LOCALSEND_SETTINGS"
+jq '. + {"flutter.ls_minimize_to_tray": true}' "$LOCALSEND_SETTINGS" > "$LOCALSEND_SETTINGS.tmp" && mv "$LOCALSEND_SETTINGS.tmp" "$LOCALSEND_SETTINGS"
+print_status "LocalSend installed, runs in the tray"
 
 # Teams (Flatpak; replaces teams-for-linux from AUR) and Flatseal (Flatpak permission manager)
 print_info "Installing Teams for Linux and Flatseal (Flatpak)..."
