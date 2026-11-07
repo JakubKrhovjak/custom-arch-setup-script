@@ -12,6 +12,12 @@ WORK=$1
 MODE=$2
 cd "$WORK"
 
+# A second start would fail, but only after removing the monitor socket of the running VM
+if [ -e qemu.pid ] && kill -0 "$(cat qemu.pid)" 2>/dev/null; then
+    echo "VM already running, pid $(cat qemu.pid)" >&2
+    exit 1
+fi
+
 [ -f disk.qcow2 ] || qemu-img create -q -f qcow2 disk.qcow2 60G
 [ -f vars.fd ] || cp /usr/share/edk2/x64/OVMF_VARS.4m.fd vars.fd
 

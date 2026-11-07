@@ -37,8 +37,7 @@ stop_vm() {
     exit 1
 }
 
-boot_vm() {
-    "$HERE/vm.sh" "$WORK" disk >/dev/null
+unlock_vm() {
     pause 25
     python3 -I "$HERE/monitor.py" "$WORK" type disk1234
     python3 -I "$HERE/monitor.py" "$WORK" key ret
@@ -56,7 +55,8 @@ versions() {
 stop_vm
 qemu-img snapshot -d "$SNAPSHOT" "$WORK/disk.qcow2" 2>/dev/null
 qemu-img snapshot -c "$SNAPSHOT" "$WORK/disk.qcow2" || exit 1
-boot_vm
+"$HERE/vm.sh" "$WORK" disk >/dev/null
+unlock_vm
 
 echo "before: $(versions)"
 # The test server takes no pushes; without origin desk-update saves its state only locally
@@ -68,8 +68,8 @@ echo "after:  $(versions)"
 check "desk-update finished without errors" test "$update_status" -eq 0
 
 "${SSH[@]}" 'sudo systemctl reboot' 2>/dev/null
-pause 25
-boot_vm
+pause 10
+unlock_vm
 
 greeter=$("${SSH[@]}" 'pgrep -a -u greeter | grep -cE "Hyprland|qs "')
 check "login screen runs (Hyprland and shell)" test "$greeter" -eq 2
