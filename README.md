@@ -32,6 +32,8 @@ Keep a wired keyboard: Bluetooth does not work at the passphrase prompt (first b
 
 ### After the setup (needs your logins, so not automated)
 
+The first terminal on the desktop offers steps 1 and 3 once (`login-prompt.sh`); skipped ones stay manual:
+
 1. Proton Pass CLI: `pass-cli login` (opens nothing, copy the printed URL to a browser). Shell secrets arrive
    within a minute via `secrets-sync.timer`; open a new terminal.
 2. Notesnook: sign in (login in Proton Pass), the notes come down with the sync.

@@ -18,7 +18,7 @@ echo "--- monitors"; hyprctl monitors -j 2>/dev/null | jq -c '.[] | {name, width
 echo "--- layers"; hyprctl layers -j 2>/dev/null | jq -r '.. | .namespace? // empty' | sort -u | paste -sd' '
 echo "--- config errors"; hyprctl configerrors 2>&1 | head -10 | cut -c1-160
 echo "--- plugin"; hyprctl plugin list 2>&1 | head -3 | cut -c1-80
-echo "--- icon theme"; grep -m1 Inherits ~/.local/share/icons/Simpleton/index.theme; grep -h iconTheme ~/.config/qtengine/config.json
+echo "--- icon theme"; grep -m1 Inherits ~/.local/share/icons/Simpleton/index.theme; grep -h icon_theme ~/.config/qt6ct/qt6ct.conf
 echo "--- scheme"; jq -r '.name' ~/.local/state/caelestia/scheme.json 2>&1
 echo "--- shell log"; qs -c desk log 2>/dev/null | grep -i -E ' (error|warn|critical)|fatal' | cut -c1-170 | tail -15
 grim /tmp/desk-check.png 2>&1 | head -2

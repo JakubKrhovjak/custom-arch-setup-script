@@ -4,6 +4,9 @@ source "$HOME/.config/zsh/base.zsh"
 # Prompt
 command -v starship >/dev/null && eval "$(starship init zsh)"
 
+# Logins offered once after a fresh install; before the secrets, so this shell already gets them
+[[ -n $WAYLAND_DISPLAY && -f "$HOME/arch-setup/.login-prompt-pending" ]] && bash "$HOME/arch-setup/login-prompt.sh"
+
 # Secrets: loaded from Secret Service (filled from Proton Pass by secrets-sync); the file holds no values
 [[ -f "$HOME/.config/zsh/secrets.zsh" ]] && source "$HOME/.config/zsh/secrets.zsh"
 # Optional per-machine overrides — never in git

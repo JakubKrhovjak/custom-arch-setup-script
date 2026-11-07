@@ -34,5 +34,6 @@ for STEP in "${STEPS[@]}"; do
     fi
 done
 
+touch "$REPO/.login-prompt-pending"
 touch "$REPO/.first-login-done"
 finish "All done. Press Enter to start the desktop. The graphical login screen appears after the next reboot."
