@@ -402,6 +402,21 @@ user = "greeter"
 EOF
 # Keyring unlocked by the login password: the shell secrets and browsers read it through Secret Service
 printf 'auth optional pam_gnome_keyring.so\nsession optional pam_gnome_keyring.so auto_start\n' >> /etc/pam.d/greetd
+# Num Lock on at the text login screen; Desk and its login screen turn it on themselves (numlock_by_default)
+cat > /etc/systemd/system/numlock.service <<'EOF'
+[Unit]
+Description=Num Lock on the first console
+Before=greetd.service
+
+[Service]
+Type=oneshot
+StandardInput=tty
+TTYPath=/dev/tty1
+ExecStart=/usr/bin/setleds -D +num
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # UKIs + systemd-boot (finds UKIs in EFI/Linux on its own)
 mkinitcpio -P
@@ -414,7 +429,7 @@ rm -f /boot/initramfs-*.img
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
 # Services
-systemctl enable NetworkManager bluetooth greetd cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon cronie ufw paccache.timer reflector.timer uki-match-kernel
+systemctl enable NetworkManager bluetooth greetd numlock cups earlyoom fstrim.timer systemd-boot-update systemd-timesyncd power-profiles-daemon cronie ufw paccache.timer reflector.timer uki-match-kernel
 CHROOT
 
 printf '%s:%s\n' "$USERNAME" "$USER_PASS" | arch-chroot /mnt chpasswd
